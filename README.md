@@ -152,7 +152,7 @@ Edit `profiles.json` with the details of each family member who needs appointmen
 
 ## 🧪 Testing
 
-Run the full automated test suite (Rules Engine + OpenSpec Safety Guardrails):
+Run the full automated test suite (Rules Engine + SMS Project Guardrails + Adaptive Scheduler + Branch Selection):
 
 ```bash
 npm test
@@ -160,17 +160,19 @@ npm test
 
 Expected output:
 ```text
-🧪 Testing RulesEngine (The 3 Business Rules)...
-✅ Test 1 passed: Correctly rejected <= 2 items
-✅ Test 2 passed: Same-day appointments rejected (Rule 3)
-✅ Test 3 passed: Filtered occupied slots (Rule 2)
-✅ Test 4 passed: Validated available future slots (Rules 1, 2, 3)
-✅ Test 5 passed: Deduplication cache successfully prevents alert spam
-✅ Test 6 passed: Profiles loaded and validated against Zod schema
+🧪 Running RulesEngine unit tests...
+✅ Passed all 3 Business Rules and deduplication cache
 
-🛡️ Testing OpenSpec Guardrails...
-✅ G-SEC-02 passed: Document numbers masked to protect PII (e.g. ******7890)
-✅ G-ACT-02 passed: Concurrency mutex active, parallel bookings blocked
+🛡️ Running SMS Project Guardrails test suite...
+✅ P-SEC-02 passed: Document numbers masked to protect PII (e.g. ******7890)
+✅ P-ACT-02 passed: Concurrency mutex active, parallel bookings blocked
+✅ P-NET-01 passed: Baseline polling cadence configured safely
+
+🧪 Testing Adaptive Daily Scheduler...
+✅ Verified Peak, Regular, Evening, and Night Repose phases
+
+🧪 Running Branch Configuration & Selection Tests...
+✅ Verified Medellín 118 and 6035 dual-branch support
 
 🎉 ALL TESTS AND SPECIFICATIONS PASSED!
 ```
@@ -192,15 +194,17 @@ npm start
 
 ---
 
-## 📚 Architecture Decisions & Glossary
+## 📚 Project Documentation, Guardrails & Glossary
 
+- **[SMS Project Guardrails](docs/guardrails.md)**: The 5 core project guardrail categories (Security, Network, Business, Action, Git).
 - **[Domain & Technical Glossary](docs/glossary.md)**: Standard definitions for domain models, browser patterns, resilient networking, and guardrails.
 - **Architecture Decision Records (ADRs)**:
   - **[ADR-001: Node.js 20+ & TypeScript Runtime](docs/decisions/ADR-001-TypeScript-And-NodeJS-Runtime.md)** — Rationale for strict TypeScript, Node 20+, and TSX runner.
   - **[ADR-002: Playwright Web Automation & Traffic Sniffing](docs/decisions/ADR-002-Playwright-Browser-Automation.md)** — Rationale for Playwright over Puppeteer/Selenium with stealth and tracing.
-  - **[ADR-003: Native Fetch with Circuit Breaker](docs/decisions/ADR-003-Native-Fetch-With-Circuit-Breaker.md)** — Rationale for zero-dependency native fetch and G-NET-03 rate protection.
+  - **[ADR-003: Native Fetch with Circuit Breaker](docs/decisions/ADR-003-Native-Fetch-With-Circuit-Breaker.md)** — Rationale for zero-dependency native fetch and network rate protection.
   - **[ADR-004: grammY Telegram Framework](docs/decisions/ADR-004-Grammy-Telegram-Framework.md)** — Rationale for modern typed bot middleware and inline buttons.
   - **[ADR-005: Zod Schema Validation](docs/decisions/ADR-005-Zod-Schema-Validation.md)** — Rationale for runtime schema validation, array transforms, and PII protection.
+
 
 ---
 

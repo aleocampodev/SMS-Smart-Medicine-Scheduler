@@ -37,8 +37,9 @@ export class PlaywrightBooker {
         profileId: profile.id,
         slotDate: slot.date,
         slotTime: slot.time,
-        message: 'Guardrail G-ACT-02: Another booking process is currently running. Please wait a few moments.',
+        message: 'Project Guardrail P-ACT-02: Another booking process is currently running. Please wait a few moments.',
       };
+
     }
 
     this.isBookingInProgress = true;
@@ -117,9 +118,10 @@ export class PlaywrightBooker {
           profileId: profile.id,
           slotDate: slot.date,
           slotTime: slot.time,
-          message: 'Guardrail G-ACT-04: CAPTCHA or Cloudflare Challenge detected. Manual resolution required.',
+          message: 'Project Guardrail P-ACT-04: CAPTCHA or Cloudflare Challenge detected. Manual resolution required.',
           screenshotPath,
         };
+
       }
 
       // Fill typical appointment booking form fields with adaptive selectors
