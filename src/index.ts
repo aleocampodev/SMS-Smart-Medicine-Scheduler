@@ -2,6 +2,7 @@ import { env } from './config/env.js';
 import { loadProfiles } from './config/profiles.js';
 import { QantyClient } from './poller/qantyClient.js';
 import { RulesEngine } from './poller/rulesEngine.js';
+import { AdaptiveScheduler } from './poller/adaptiveScheduler.js';
 import { TelegramBotService } from './bot/telegramBot.js';
 
 async function main() {
@@ -47,18 +48,20 @@ async function main() {
     }
   };
 
-  // Programar ejecuciones con jitter aleatorio (G-NET-02)
+  const adaptiveScheduler = new AdaptiveScheduler();
+
+  // Programar ejecuciones inteligentes según el ciclo diario (Opción A)
   const scheduleNextPoll = () => {
-    // Jitter aleatorio entre -5s y +10s
-    const jitterSeconds = Math.floor(Math.random() * 16) - 5;
-    const intervalMs = Math.max(30, env.POLL_INTERVAL_SECONDS + jitterSeconds) * 1000;
+    const adaptive = adaptiveScheduler.getAdaptiveInterval(new Date(), env.POLL_INTERVAL_SECONDS);
+    console.log(`[Scheduler:Adaptive] ${adaptive.description}`);
+
     setTimeout(async () => {
       await pollCycle();
       scheduleNextPoll();
-    }, intervalMs);
+    }, adaptive.intervalMs);
   };
 
-  // Ejecutar primer ciclo inmediatamente y programar siguientes con jitter
+  // Ejecutar primer ciclo inmediatamente y programar siguientes con horario inteligente
   await pollCycle();
   scheduleNextPoll();
 }
