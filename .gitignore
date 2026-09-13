@@ -4,5 +4,6 @@ dist/
 profiles.json
 screenshots/
 traces/
+dumps/
 logs/
 .DS_Store

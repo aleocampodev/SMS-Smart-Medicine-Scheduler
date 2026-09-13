@@ -8,14 +8,14 @@ import fs from 'fs';
 export class TelegramBotService {
   private bot: Bot | null = null;
   private booker: PlaywrightBooker;
-  // Memoria temporal de slots activos para los callbacks de los botones
+  // Temporary storage of active slots for button callbacks
   private activeSlots: Map<string, QantySlot> = new Map();
 
   constructor() {
     this.booker = new PlaywrightBooker();
 
-    if (!env.TELEGRAM_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN === 'tu_token_aqui' || env.TELEGRAM_BOT_TOKEN === 'mock_token') {
-      console.warn('[TelegramBot] Token no configurado. El bot operará en modo consola / mock.');
+    if (!env.TELEGRAM_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN === 'your_token_here' || env.TELEGRAM_BOT_TOKEN === 'mock_token') {
+      console.warn('[TelegramBot] Token not configured. The bot will operate in console/mock mode.');
       return;
     }
 
@@ -26,21 +26,21 @@ export class TelegramBotService {
   private setupHandlers(): void {
     if (!this.bot) return;
 
-    // Comando /start
+    // Command /start
     this.bot.command('start', async (ctx) => {
       await ctx.reply(
-        '👋 *¡Hola! Soy el Smart Medicine Scheduler Bot.*\n\n' +
-        'Te notificaré de inmediato cuando se detecten citas disponibles en Qanty y te permitiré reservarlas con 1 clic.\n\n' +
-        'Usa `/perfiles` para ver las personas configuradas.',
+        '👋 *Hello! I am the Smart Medicine Scheduler Bot.*\n\n' +
+        'I will notify you immediately when available medicine dispensing appointments are detected in Qanty, allowing 1-click booking.\n\n' +
+        'Use `/profiles` to view all configured individuals.',
         { parse_mode: 'Markdown' }
       );
     });
 
-    // Comando /perfiles (con enmascaramiento G-SEC-02)
-    this.bot.command('perfiles', async (ctx) => {
+    // Command /profiles (with PII masking G-SEC-02)
+    this.bot.command('profiles', async (ctx) => {
       const profiles = loadProfiles();
       if (profiles.length === 0) {
-        await ctx.reply('⚠️ No hay perfiles cargados en `profiles.json`.');
+        await ctx.reply('⚠️ No profiles loaded in `profiles.json`.');
         return;
       }
 
@@ -48,18 +48,18 @@ export class TelegramBotService {
         .map((p) => `• *${p.displayName}* (${p.documentType} \`${p.documentNumber.slice(-4).padStart(p.documentNumber.length, '*')}\`)`)
         .join('\n');
 
-      await ctx.reply(`📋 *Perfiles disponibles para agendamiento:*\n\n${list}`, {
+      await ctx.reply(`📋 *Available profiles for scheduling:*\n\n${list}`, {
         parse_mode: 'Markdown',
       });
     });
 
-    // Manejador de callbacks de botones inline: "book:<slotId>:<profileId>"
+    // Callback query handler for inline buttons: "book:<slotId>:<profileId>"
     this.bot.on('callback_query:data', async (ctx) => {
       const data = ctx.callbackQuery.data;
 
       if (data.startsWith('dismiss:')) {
-        await ctx.answerCallbackQuery({ text: 'Alerta descartada.' });
-        await ctx.editMessageText('❌ *Alerta descartada por el usuario.*', { parse_mode: 'Markdown' });
+        await ctx.answerCallbackQuery({ text: 'Alert dismissed.' });
+        await ctx.editMessageText('❌ *Alert dismissed by user.*', { parse_mode: 'Markdown' });
         return;
       }
 
@@ -72,30 +72,30 @@ export class TelegramBotService {
         const profile = getProfileById(profileId);
 
         if (!profile) {
-          await ctx.answerCallbackQuery({ text: 'Error: Perfil no encontrado.' });
+          await ctx.answerCallbackQuery({ text: 'Error: Profile not found.' });
           return;
         }
 
-        await ctx.answerCallbackQuery({ text: `Iniciando reserva para ${profile.displayName}...` });
-        await ctx.reply(`🚀 *Iniciando Playwright automator para ${profile.displayName}...*\nEspere un momento mientras se completa el formulario.`, {
+        await ctx.answerCallbackQuery({ text: `Starting booking for ${profile.displayName}...` });
+        await ctx.reply(`🚀 *Launching Playwright automator for ${profile.displayName}...*\nPlease wait while the form is filled.`, {
           parse_mode: 'Markdown',
         });
 
-        // Crear slot de fallback si expiró de la memoria activa
+        // Fallback slot if active memory expired
         const effectiveSlot: QantySlot = slot || {
-          date: 'Próxima fecha',
+          date: 'Next available date',
           status: 'free',
         };
 
-        // Ejecutar automatización
+        // Execute browser booking
         const result = await this.booker.bookAppointment(effectiveSlot, profile);
 
         if (result.success) {
           const successMsg =
-            `✅ *¡Reserva completada!*\n\n` +
-            `👤 *Persona:* ${profile.displayName}\n` +
-            `📅 *Fecha:* ${result.slotDate} ${result.slotTime || ''}\n` +
-            `💬 *Resultado:* ${result.message}`;
+            `✅ *Appointment Booking Completed!*\n\n` +
+            `👤 *Person:* ${profile.displayName}\n` +
+            `📅 *Date:* ${result.slotDate} ${result.slotTime || ''}\n` +
+            `💬 *Result:* ${result.message}`;
 
           if (result.screenshotPath && fs.existsSync(result.screenshotPath)) {
             await ctx.replyWithPhoto(new InputFile(result.screenshotPath), {
@@ -107,8 +107,8 @@ export class TelegramBotService {
           }
         } else {
           const errorMsg =
-            `❌ *Error al reservar para ${profile.displayName}*\n\n` +
-            `⚠️ Motivo: ${result.message}`;
+            `❌ *Booking failed for ${profile.displayName}*\n\n` +
+            `⚠️ Reason: ${result.message}`;
 
           if (result.screenshotPath && fs.existsSync(result.screenshotPath)) {
             await ctx.replyWithPhoto(new InputFile(result.screenshotPath), {
@@ -123,50 +123,50 @@ export class TelegramBotService {
     });
 
     this.bot.catch((err) => {
-      console.error('[TelegramBot] Error en el bot de Telegram:', err);
+      console.error('[TelegramBot] Telegram bot error:', err);
     });
   }
 
   /**
-   * Inicia el bot en modo polling
+   * Starts the bot in long polling mode
    */
   public async start(): Promise<void> {
     if (!this.bot) {
-      console.log('[TelegramBot] Modo offline/mock activo.');
+      console.log('[TelegramBot] Offline/mock mode active.');
       return;
     }
-    console.log('[TelegramBot] Iniciando bot de Telegram...');
+    console.log('[TelegramBot] Starting Telegram bot...');
     this.bot.start({
       onStart: (info) => {
-        console.log(`[TelegramBot] Bot conectado como @${info.username}`);
+        console.log(`[TelegramBot] Bot connected as @${info.username}`);
       },
     });
   }
 
   /**
-   * Envía una alerta con Inline Keyboard con las opciones para cada perfil
+   * Dispatches an alert with an Inline Keyboard for each profile
    */
   public async sendAvailabilityAlert(slot: QantySlot, profiles: Profile[]): Promise<void> {
     const slotKey = `${slot.date}_${slot.time || 'all'}_${slot.id || Date.now()}`;
     this.activeSlots.set(slotKey, slot);
 
     const message =
-      `🚨 *¡CITA DISPONIBLE ENCONTRADA EN QANTY!*\n\n` +
-      `📅 *Fecha:* \`${slot.date}\`\n` +
-      `⏰ *Hora:* \`${slot.time || 'Consultar'}\`\n` +
-      `🏢 *Sede:* ${slot.branch || 'Sede Principal'}\n` +
-      `💊 *Servicio:* ${slot.specialty || 'Dispensación Medicamentos'}\n\n` +
-      `👇 *Selecciona la persona para agendar de inmediato:*`;
+      `🚨 *AVAILABLE MEDICINE PICKUP SLOT DETECTED!*\n\n` +
+      `📅 *Date:* \`${slot.date}\`\n` +
+      `⏰ *Time:* \`${slot.time || 'Check portal'}\`\n` +
+      `🏢 *Branch:* ${slot.branch || 'Main Branch'}\n` +
+      `💊 *Service:* ${slot.specialty || 'Medicine Dispensing'}\n\n` +
+      `👇 *Select profile to book immediately:*`;
 
     const keyboard = new InlineKeyboard();
 
     profiles.forEach((profile, index) => {
       keyboard.text(`👤 ${profile.displayName}`, `book:${slotKey}:${profile.id}`);
-      if (index % 2 === 1) keyboard.row(); // 2 botones por fila
+      if (index % 2 === 1) keyboard.row(); // 2 buttons per row
     });
 
     if (profiles.length % 2 !== 0) keyboard.row();
-    keyboard.text('❌ Descartar', `dismiss:${slotKey}`);
+    keyboard.text('❌ Dismiss', `dismiss:${slotKey}`);
 
     if (this.bot && env.TELEGRAM_CHAT_ID && env.TELEGRAM_CHAT_ID !== 'mock_chat_id') {
       try {
@@ -174,12 +174,12 @@ export class TelegramBotService {
           parse_mode: 'Markdown',
           reply_markup: keyboard,
         });
-        console.log(`[TelegramBot] Alerta enviada exitosamente al chat ${env.TELEGRAM_CHAT_ID}`);
+        console.log(`[TelegramBot] Alert sent successfully to chat ${env.TELEGRAM_CHAT_ID}`);
       } catch (error: any) {
-        console.error(`[TelegramBot] Error al enviar alerta a Telegram:`, error.message);
+        console.error(`[TelegramBot] Failed to send alert to Telegram:`, error.message);
       }
     } else {
-      console.log(`[TelegramBot Mock Alert]\n${message}\nBotones: ${profiles.map((p) => p.displayName).join(', ')}`);
+      console.log(`[TelegramBot Mock Alert]\n${message}\nButtons: ${profiles.map((p) => p.displayName).join(', ')}`);
     }
   }
 }

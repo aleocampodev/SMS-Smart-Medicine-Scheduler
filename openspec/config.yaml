@@ -1,7 +1,7 @@
 schema_version: "1.0.0"
 project:
   name: "sms-smart-medicine-scheduler"
-  description: "Monitor de disponibilidad en Qanty, notificaciones interactivas en Telegram y automatización de reserva con Playwright"
+  description: "Automated medicine appointment scheduler with Qanty API polling, interactive Telegram alerts, and Playwright booking automation"
   version: "1.0.0"
 
 specs:
@@ -17,3 +17,6 @@ specs:
   - id: "playwright-booker"
     path: "specs/playwright-booker/spec.md"
     name: "Playwright Multi-Profile Booker"
+  - id: "api-discovery"
+    path: "specs/api-discovery/spec.md"
+    name: "Qanty Portal API Discovery & Traffic Sniffer"

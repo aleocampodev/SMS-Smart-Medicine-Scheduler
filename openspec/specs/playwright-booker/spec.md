@@ -2,14 +2,14 @@
 
 **ID**: `playwright-booker`  
 **Version**: `1.0.0`  
-**Author**: Basado en las guías de calidad web y automatización de navegador de Addy Osmani (`web-quality-skills`)  
+**Author**: Based on Addy Osmani's web quality and headless browser automation guidelines (`web-quality-skills`)  
 **Status**: `Active`
 
 ---
 
-## 1. Principios de Addy Osmani Aplicados al Agendamiento Web
+## 1. Addy Osmani Principles Applied to Medicine Scheduling
 
-La automatización de citas médicas de alta demanda requiere máxima velocidad de ejecución, confiabilidad determinista y mínimo consumo de recursos. Aplicamos 4 pilares fundamentales:
+Automating high-demand medicine pickup appointments requires maximum execution speed, deterministic reliability, and minimal resource footprints. We enforce 4 core pillars:
 
 ```
                   ┌──────────────────────────────────────────────┐
@@ -25,24 +25,23 @@ La automatización de citas médicas de alta demanda requiere máxima velocidad 
 
 ---
 
-## 2. Directrices de Rendimiento (Performance Budgets)
+## 2. Performance Guidelines & Budgets
 
-1. **Presupuesto de Tiempo (Latency Budget)**:
-   - Tiempo de carga y navegación inicial: $< 3.0\text{ s}$.
-   - Tiempo de inyección de datos de formulario: $< 1.0\text{ s}$.
-   - Tiempo total de ciclo de reserva: $< 6.0\text{ s}$.
+1. **Latency Budget**:
+   - Initial navigation & load time: $< 3.0\text{ s}$.
+   - Form data injection time: $< 1.0\text{ s}$.
+   - Total round-trip booking time: $< 6.0\text{ s}$.
 
-2. **Bloqueo Inteligente de Recursos (Resource Routing)**:
-   - Para acelerar la respuesta y reducir la huella de memoria en el runner, interceptar y abortar solicitudes de tipo:
-     - `media` (videos/audios)
-     - `font` (fuentes externas pesadas no críticas para interactuar)
-     - `images` innecesarias (salvo capturas de comprobante)
-     - Rastreadores de analítica de terceros (Google Analytics, Hotjar, etc.)
+2. **Smart Resource Routing**:
+   - To maximize speed and reduce memory consumption, intercept and abort:
+     - `media` (video/audio streams)
+     - `font` (heavy external web fonts non-critical for form interactions)
+     - Third-party analytics trackers (Google Analytics, Hotjar, Facebook Pixel)
 
-3. **Diagnóstico Forense con Tracing (DevTools Traces)**:
-   - Iniciar `context.tracing.start({ screenshots: true, snapshots: true, sources: true })`.
-   - Si la reserva es exitosa, descartar el trace para no consumir disco.
-   - Si la reserva falla, exportar `trace-failure-<timestamp>.zip` para ser inspeccionado con `trace.playwright.dev` o Chrome DevTools MCP.
+3. **Forensic Diagnosis with Tracing (DevTools Traces)**:
+   - Launch `context.tracing.start({ screenshots: true, snapshots: true, sources: true })`.
+   - On booking success: Discard trace in memory to save disk space.
+   - On booking failure: Export `traces/trace_<id>_<timestamp>.zip` for deep inspection via `playwright show-trace` or Chrome DevTools MCP.
 
-4. **Selectores Resilientes y Accesibles (a11y First)**:
-   - Priorizar selectores basados en accesibilidad y semántica (`getByRole`, `getByLabel`, `getByPlaceholder`) antes que selectores frágiles basados en clases CSS dinámicas u ofuscadas.
+4. **Resilient Accessible Selectors (a11y First)**:
+   - Prioritize semantic accessibility selectors (`getByRole`, `getByLabel`, `getByPlaceholder`) over fragile obfuscated CSS class names.

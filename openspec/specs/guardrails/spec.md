@@ -3,83 +3,68 @@
 **ID**: `guardrails`  
 **Version**: `1.0.0`  
 **Status**: `Active`  
-**Scope**: Seguridad, Resiliencia de Red, Privacidad de Datos y Control de Ejecución para `sms-smart-medicine-scheduler`.
+**Scope**: Security, Network Resilience, Data Privacy, and Execution Boundaries for `sms-smart-medicine-scheduler`.
 
 ---
 
-## 1. Visión General
+## 1. Overview
 
-Este documento establece los **guardrails obligatorios** (barreras de contención y seguridad) que gobiernan el ciclo de vida del Smart Medicine Scheduler. Ningún cambio de código o comportamiento en producción puede violar estas políticas.
+This document establishes the **mandatory guardrails** that govern the runtime behavior and deployment of the Smart Medicine Scheduler. No code change or operational workflow may violate these policies.
 
 ```
                     ┌──────────────────────────────────────────────┐
-                    │            OPENPEC GUARDRAILS                │
+                    │            OPENSPEC GUARDRAILS               │
                     └──────────────────────┬───────────────────────┘
                                            │
          ┌──────────────────┬──────────────┴─────┬──────────────────┐
          ▼                  ▼                    ▼                  ▼
-  [🛡️ Privacidad & PII]  [🌐 Red & Anti-Ban]   [⚙️ Reglas Negocio]  [🤖 Playwright & Ops]
-  - No commit PII        - Rate Limit >= 30s   - 3 Reglas Qanty     - Human-in-the-loop
-  - Enmascarar cédulas   - Jitter aleatorio    - Deduplicación      - Lock de concurrencia
-  - .gitignore estricto  - Circuit Breaker     - Anti-spam          - Timeouts & Screenshots
+  [🛡️ Privacy & PII]     [🌐 Network Defense]  [⚙️ Business Logic]  [🤖 Playwright & Ops]
+  - No PII in repo       - Rate Limit >= 30s   - 3 Qanty Rules      - Human-in-the-loop
+  - Mask national IDs    - Random Jitter       - Deduplication      - Concurrency Mutex
+  - Strict .gitignore    - Circuit Breaker     - Anti-spam Cache    - Timeouts & Screenshots
 ```
 
 ---
 
-## 2. Categorías de Guardrails
+## 2. Guardrail Catalog
 
-### 2.1. Seguridad y Privacidad (PII & Credentials)
+### 2.1. Security and Privacy (PII & Credentials)
 
-| ID | Nombre | Severidad | Regla |
+| ID | Name | Severity | Policy Rule |
 | :--- | :--- | :--- | :--- |
-| **G-SEC-01** | **No PII en Repositorios** | `CRITICAL` | `profiles.json` y archivos con nombres, cédulas o teléfonos reales **NUNCA** deben ser rastreados en Git. Solo se permite versionar `profiles.example.json`. |
-| **G-SEC-02** | **Enmascaramiento de Datos (Data Masking)** | `HIGH` | Todo log y mensaje de Telegram que muestre documentos debe ofuscar los primeros dígitos (ej. `*******7890`). |
-| **G-SEC-03** | **Aislamiento de Tokens** | `CRITICAL` | `TELEGRAM_BOT_TOKEN` y llaves de acceso deben inyectarse exclusivamente por variables de entorno (`.env`), nunca hardcodeados. |
+| **G-SEC-01** | **No PII in Repositories** | `CRITICAL` | `profiles.json` and files containing real citizen IDs, names, or phone numbers must **NEVER** be tracked in Git. Only `profiles.example.json` is tracked. |
+| **G-SEC-02** | **Data Masking** | `HIGH` | All logs and Telegram messages displaying document numbers must obfuscate leading digits (e.g. `******7890`). |
+| **G-SEC-03** | **Credential Isolation** | `CRITICAL` | `TELEGRAM_BOT_TOKEN` and access keys must be supplied strictly via environment variables (`.env`), never hardcoded. |
 
-### 2.2. Red y Anti-Bloqueo (WAF & Rate Limiting)
+### 2.2. Network and Anti-Ban (WAF & Rate Limiting)
 
-| ID | Nombre | Severidad | Regla |
+| ID | Name | Severity | Policy Rule |
 | :--- | :--- | :--- | :--- |
-| **G-NET-01** | **Rate Limit Mínimo** | `HIGH` | El intervalo de consulta hacia `qanty.com` no debe ser inferior a **30 segundos** por defecto. |
-| **G-NET-02** | **Jitter Aleatorio Anti-Fingerprint** | `MEDIUM` | Cada petición debe añadir un retardo aleatorio de $\pm 5$ a $\pm 15$ segundos para no generar un patrón estático detectable por WAF / Cloudflare. |
-| **G-NET-03** | **Circuit Breaker (429 / 403)** | `HIGH` | Si la API de Qanty responde con código `429 (Too Many Requests)` o `403 (Forbidden)`, el poller debe detenerse inmediatamente por **10 minutos** con backoff exponencial. |
-| **G-NET-04** | **Headers Realistas de Navegador** | `MEDIUM` | Toda solicitud HTTP debe incluir `User-Agent`, `Referer`, `Origin` y `Accept` idénticos a los enviados por un navegador Chrome en Linux/Windows. |
+| **G-NET-01** | **Minimum Rate Limit** | `HIGH` | Polling requests to `qanty.com` must have a baseline interval of at least **30 seconds**. |
+| **G-NET-02** | **Anti-Fingerprint Random Jitter** | `MEDIUM` | Every polling iteration must introduce a random delay variance ($\pm 5\text{s}$ to $\pm 15\text{s}$) to avoid mechanical bot detection by WAF / Cloudflare. |
+| **G-NET-03** | **Circuit Breaker (429 / 403)** | `HIGH` | If Qanty responds with HTTP status `429 (Too Many Requests)` or `403 (Forbidden)`, polling must halt immediately for **10 minutes** with defensive cooldown. |
+| **G-NET-04** | **Realistic Browser Signatures** | `MEDIUM` | All outbound HTTP requests must supply genuine browser headers (`User-Agent`, `Referer`, `Origin`, `Accept`). |
 
-### 2.3. Validación e Integridad de Negocio
+### 2.3. Business Rules Integrity & Anti-Spam
 
-| ID | Nombre | Severidad | Regla |
+| ID | Name | Severity | Policy Rule |
 | :--- | :--- | :--- | :--- |
-| **G-BIZ-01** | **Validación Estricta de las 3 Reglas** | `CRITICAL` | Ninguna cita puede ser reportada como disponible si no satisface simultáneamente:<br>1. Cantidad de items retornados $> 2$<br>2. Estado del slot igual a `free`<br>3. Fecha del slot estrictamente diferente a la fecha actual (`slot.date != currentDate`). |
-| **G-BIZ-02** | **Deduplicación Anti-Spam** | `HIGH` | Un slot ya notificado al usuario en Telegram no puede volver a emitir una notificación repetida a menos que expire su TTL en el State Store. |
-| **G-BIZ-03** | **Validación de Schema Zod** | `HIGH` | Toda entrada externa (JSON de Qanty, perfiles de usuario, variables de entorno) debe ser validada en tiempo de ejecución con esquemas Zod antes de su uso. |
+| **G-BIZ-01** | **Strict 3-Rules Validation** | `CRITICAL` | A slot can only trigger an alert if it satisfies all 3 conditions simultaneously:<br>1. Response items $> 2$<br>2. Slot status is explicitly `'free'`<br>3. Slot date is strictly different from today (`date != today`). |
+| **G-BIZ-02** | **Zero-Spam Deduplication** | `HIGH` | An appointment slot that has already been notified to the user must not re-trigger duplicate notifications within its state TTL. |
+| **G-BIZ-03** | **Zod Schema Enforcement** | `HIGH` | All external inputs (Qanty responses, user profiles, environment configs) must be validated with Zod schemas at runtime. |
 
-### 2.4. Automatización y Seguridad en Playwright
+### 2.4. Playwright Browser Automation Safety
 
-| ID | Nombre | Severidad | Regla |
+| ID | Name | Severity | Policy Rule |
 | :--- | :--- | :--- | :--- |
-| **G-ACT-01** | **Human-in-the-Loop Obligatorio** | `CRITICAL` | La acción de reservar un turno requiere confirmación explícita mediante interacción humana (clic en botón inline de Telegram con el perfil asignado). No se permiten reservas desatendidas sin consentimiento. |
-| **G-ACT-02** | **Concurrencia Unitaria (Single Lock)** | `HIGH` | Solo se permite una única sesión activa de Playwright para agendamiento simultáneo para evitar colisiones de sesión o bloqueos de IP. |
-| **G-ACT-03** | **Timeout Máximo y Limpieza de Zombis** | `HIGH` | Cualquier acción en el navegador tiene un timeout máximo estricto de **30 segundos**. El bloque `finally` debe garantizar el cierre de la instancia de `Browser` en cualquier caso de error. |
-| **G-ACT-04** | **Escalada Ante CAPTCHA** | `HIGH` | Si durante la navegación se detecta un CAPTCHA interactivo o bloqueo Cloudflare, el script debe abortar el llenado forzado, tomar captura de pantalla y notificar al usuario para intervención manual en lugar de generar bloqueos permanentes. |
-| **G-ACT-05** | **Evidencia Auditada por Screenshot** | `MEDIUM` | Cada intento de reserva (éxito o fallo) debe generar un archivo `.png` en disco con marca de tiempo y enviarse como comprobante a Telegram. |
+| **G-ACT-01** | **Mandatory Human-in-the-Loop** | `CRITICAL` | Booking an appointment strictly requires explicit human authorization via an interactive Telegram inline button click. No blind automated bookings. |
+| **G-ACT-02** | **Single Concurrency Mutex Lock** | `HIGH` | Only 1 active Playwright browser booking session is permitted at any given moment to prevent session collisions and IP bans. |
+| **G-ACT-03** | **Strict Timeout & Zombie Cleanup** | `HIGH` | All browser operations have a maximum timeout of **30 seconds**. Browser context termination is guaranteed in `finally` blocks. |
+| **G-ACT-04** | **CAPTCHA Escalation** | `HIGH` | If a Cloudflare challenge or reCAPTCHA is detected in the DOM, automated input is aborted, an alert screenshot is captured, and manual completion is requested. |
+| **G-ACT-05** | **Audit Evidence Receipt** | `MEDIUM` | Every booking attempt (success or failure) must generate a timestamped `.png` screenshot sent directly to Telegram. |
 
-### 2.5. Git y Desarrollo (Políticas del Repositorio)
+### 2.5. Git & Deployment Policies
 
-| ID | Nombre | Severidad | Regla |
+| ID | Name | Severity | Policy Rule |
 | :--- | :--- | :--- | :--- |
-| **G-DEV-01** | **Main Branch Protection** | `CRITICAL` | **PROHIBIDO** hacer push directo o merge directo a `main`. Todo el código se gestiona en ramas de características (`feat/*`, `fix/*`). |
-
----
-
-## 3. Matriz de Cumplimiento Técnico en Código
-
-| Guardrail | Archivo de Implementación | Estrategia Técnica |
-| :--- | :--- | :--- |
-| `G-SEC-01` | `.gitignore` | `profiles.json` ignorado por defecto; se provee `profiles.example.json`. |
-| `G-SEC-02` | `src/config/profiles.ts` | Función `maskDocument()` que oculta dígitos sensibles. |
-| `G-NET-01` / `02` | `src/index.ts`, `src/config/env.ts` | Validación Zod `min(30)` + retardo aleatorio (`jitter`). |
-| `G-NET-03` | `src/poller/qantyClient.ts` | Detección de HTTP 429/403 con backoff y flag de pausa. |
-| `G-BIZ-01` / `02` | `src/poller/rulesEngine.ts` | Evaluación secuencial de reglas + `Set<string>` para deduplicación. |
-| `G-ACT-01` | `src/bot/telegramBot.ts` | Botones de Telegram con callback seguro (`book:<slotKey>:<profileId>`). |
-| `G-ACT-02` / `03` | `src/automation/playwrightBooker.ts` | Mutex / flag de ejecución + `try/finally` para `browser.close()`. |
-| `G-ACT-05` | `src/automation/playwrightBooker.ts` | Captura obligatoria `page.screenshot()` enviada a Telegram. |
+| **G-DEV-01** | **Main Branch Protection** | `CRITICAL` | **NEVER** push or merge directly to `main`. All work must be conducted in dedicated feature branches (`feat/*`, `fix/*`, `docs/*`). |

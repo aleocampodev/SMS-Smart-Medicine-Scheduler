@@ -14,7 +14,7 @@ export function loadProfiles(): Profile[] {
     : exampleProfilesPath;
 
   if (!fs.existsSync(filePathToRead)) {
-    console.warn(`[Profiles] Advertencia: No se encontró profiles.json ni profiles.example.json`);
+    console.warn(`[Profiles] Warning: Neither profiles.json nor profiles.example.json was found.`);
     return [];
   }
 
@@ -23,7 +23,7 @@ export function loadProfiles(): Profile[] {
     const parsedJson = JSON.parse(fileContent);
     return ProfilesArraySchema.parse(parsedJson);
   } catch (error) {
-    console.error(`[Profiles] Error al parsear perfiles desde ${filePathToRead}:`, error);
+    console.error(`[Profiles] Error parsing profiles from ${filePathToRead}:`, error);
     return [];
   }
 }
@@ -34,8 +34,8 @@ export function getProfileById(id: string): Profile | undefined {
 }
 
 /**
- * Enmascara números de documentos personales para logs y vistas públicas (G-SEC-02)
- * Ej: 1234567890 -> *******7890
+ * Masks sensitive national document IDs for logs and public interfaces (G-SEC-02)
+ * Example: 1234567890 -> ******7890
  */
 export function maskDocument(documentNumber: string): string {
   if (!documentNumber || documentNumber.length <= 4) {

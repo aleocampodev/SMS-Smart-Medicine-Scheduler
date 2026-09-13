@@ -10,7 +10,7 @@ export interface QantyFetchOptions {
 
 export class QantyClient {
   private endpoint: string;
-  // Circuit Breaker (G-NET-03): timestamp hasta cuando el cliente está pausado
+  // Circuit Breaker (G-NET-03): timestamp until which client is paused
   private circuitBreakerUntil: number = 0;
 
   constructor(endpoint?: string) {
@@ -18,13 +18,13 @@ export class QantyClient {
   }
 
   /**
-   * Consulta el endpoint POST /p/appointments/list_day_schedule
+   * Queries the POST /p/appointments/list_day_schedule endpoint
    */
   public async fetchDaySchedule(options: QantyFetchOptions = {}): Promise<any[]> {
     const now = Date.now();
     if (now < this.circuitBreakerUntil) {
       const waitSeconds = Math.ceil((this.circuitBreakerUntil - now) / 1000);
-      console.warn(`[QantyClient:CircuitBreaker] Sondeo en pausa preventiva por ${waitSeconds}s tras bloqueo previo.`);
+      console.warn(`[QantyClient:CircuitBreaker] Polling paused defensively for ${waitSeconds}s following prior rate limit.`);
       return [];
     }
     const defaultPayload = {
@@ -46,7 +46,7 @@ export class QantyClient {
     };
 
     try {
-      console.log(`[QantyClient] Consultando POST ${this.endpoint}...`);
+      console.log(`[QantyClient] Querying POST ${this.endpoint}...`);
       const response = await fetch(this.endpoint, {
         method: 'POST',
         headers,
@@ -55,9 +55,9 @@ export class QantyClient {
 
       if (!response.ok) {
         console.warn(`[QantyClient] HTTP error ${response.status}: ${response.statusText}`);
-        // Guardrail G-NET-03: Pausa de 10 minutos (600,000 ms) si se detecta rate limit o bloqueo
+        // Guardrail G-NET-03: 10-minute cooldown (600,000 ms) upon 429 / 403 response
         if (response.status === 429 || response.status === 403) {
-          console.error(`[QantyClient:CircuitBreaker] Activado tras HTTP ${response.status}. Pausando peticiones por 10 minutos.`);
+          console.error(`[QantyClient:CircuitBreaker] Activated after HTTP ${response.status}. Pausing polling for 10 minutes.`);
           this.circuitBreakerUntil = Date.now() + 10 * 60 * 1000;
         }
         return [];
@@ -65,7 +65,7 @@ export class QantyClient {
 
       const data = (await response.json()) as any;
 
-      // Dependiendo de cómo empaquete Qanty la lista de horarios (data, items, schedules, etc.)
+      // Extract array based on typical Qanty envelope packaging
       if (Array.isArray(data)) {
         return data;
       }
@@ -79,10 +79,10 @@ export class QantyClient {
         return data.schedules;
       }
 
-      console.warn(`[QantyClient] Formato de respuesta no es un array directo:`, typeof data);
+      console.warn(`[QantyClient] Response format is not a direct array:`, typeof data);
       return [];
     } catch (error: any) {
-      console.error(`[QantyClient] Error al conectar con Qanty API:`, error.message);
+      console.error(`[QantyClient] Error connecting to Qanty API:`, error.message);
       return [];
     }
   }
