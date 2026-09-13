@@ -19,8 +19,11 @@ const EnvSchema = z.object({
   TARGET_BRANCH_IDS: z
     .string()
     .optional()
-    .transform((v) => (v ? v.split(',').map((s) => s.trim()) : ['6035'])),
+    .transform((v) =>
+      v ? v.split(',').map((s) => s.trim()).filter(Boolean) : ['6035', '118']
+    ),
 });
+
 
 export const env = EnvSchema.parse(process.env);
 

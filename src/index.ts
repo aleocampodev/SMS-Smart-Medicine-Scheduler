@@ -21,32 +21,37 @@ async function main() {
   // Start Telegram bot listener
   await botService.start();
 
-  console.log(`[Poller] Starting monitoring loop with base interval of ${env.POLL_INTERVAL_SECONDS}s...`);
+  console.log(`[Poller] Starting monitoring loop for branches: ${env.TARGET_BRANCH_IDS.join(', ')} (base interval: ${env.POLL_INTERVAL_SECONDS}s)...`);
 
   const pollCycle = async () => {
     try {
-      console.log(`\n[Poller] [${new Date().toISOString()}] Checking appointment availability in Qanty...`);
-      const rawData = await qantyClient.fetchDaySchedule();
+      console.log(`\n[Poller] [${new Date().toISOString()}] Checking appointment availability in Qanty for ${env.TARGET_BRANCH_IDS.length} target branches...`);
 
-      const evaluation = rulesEngine.evaluate(rawData);
-      console.log(`[RulesEngine] Evaluation results:`, evaluation.reasons);
+      for (const branchId of env.TARGET_BRANCH_IDS) {
+        console.log(`[Poller:Branch ${branchId}] Querying schedule...`);
+        const rawData = await qantyClient.fetchDaySchedule({ branchId });
 
-      if (evaluation.hasAvailability) {
-        const newSlots = rulesEngine.filterUnnotifiedSlots(evaluation.matchingSlots);
+        const evaluation = rulesEngine.evaluate(rawData, { branchId });
+        console.log(`[RulesEngine:Branch ${branchId}] Evaluation:`, evaluation.reasons);
 
-        if (newSlots.length > 0) {
-          console.log(`[Poller] 🚨 Found ${newSlots.length} new available slots to notify!`);
-          for (const slot of newSlots) {
-            await botService.sendAvailabilityAlert(slot, profiles);
+        if (evaluation.hasAvailability) {
+          const newSlots = rulesEngine.filterUnnotifiedSlots(evaluation.matchingSlots);
+
+          if (newSlots.length > 0) {
+            console.log(`[Poller:Branch ${branchId}] 🚨 Found ${newSlots.length} new available slots to notify!`);
+            for (const slot of newSlots) {
+              await botService.sendAvailabilityAlert(slot, profiles);
+            }
+          } else {
+            console.log(`[Poller:Branch ${branchId}] Available slots were already notified previously.`);
           }
-        } else {
-          console.log(`[Poller] Available slots were already notified previously.`);
         }
       }
     } catch (err: any) {
       console.error(`[Poller] Polling cycle error:`, err.message);
     }
   };
+
 
   const adaptiveScheduler = new AdaptiveScheduler();
 
