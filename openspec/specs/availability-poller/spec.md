@@ -34,7 +34,18 @@ This module serves as the primary sensor of the system. Its sole responsibility 
   }
   ```
 
+### 2.2. Branch Discovery & Configuration Contract
+- **URL**: `https://qanty.com/p/get_branches`
+- **HTTP Method**: `POST`
+- **Session Prerequisite**: Requires established company session (`c=Lpds45xBMVIpsXiSxaTy`) via portal initialization. Direct unauthenticated requests return `INVALID_SESSION`.
+- **Branch Resolution**:
+  - Default Target: Branch ID `6035` (Medellín Dispensary).
+  - Configurable via `TARGET_BRANCH_ID` and `TARGET_BRANCH_NAME` in `.env`.
+  - Multi-branch monitoring supported via comma-delimited `TARGET_BRANCH_IDS`.
+  - Interactive CLI discovery provided via `npm run list:branches`.
+
 ---
+
 
 ## 3. The 3 Business Rules Engine
 

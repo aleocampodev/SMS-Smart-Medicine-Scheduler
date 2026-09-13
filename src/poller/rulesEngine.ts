@@ -21,7 +21,7 @@ export class RulesEngine {
    * 2. Availability: status === 'free' (or 'available')
    * 3. Future Date: date !== current date (excludes same-day slots)
    */
-  public evaluate(rawItems: any[]): RuleEvaluationResult {
+  public evaluate(rawItems: any[], context?: { branchId?: string; branchName?: string }): RuleEvaluationResult {
     const reasons: string[] = [];
     const todayStr = this.getTodayString();
 
@@ -43,7 +43,8 @@ export class RulesEngine {
       const status = (item.status || item.state || '').toString().toLowerCase();
       const slotDate = (item.date || item.appointment_date || item.day || '').toString().split('T')[0];
       const slotTime = (item.time || item.hour || item.start_time || '').toString();
-      const slotId = item.id || item.slot_id || `${slotDate}_${slotTime}`;
+      const branchPrefix = context?.branchId ? `${context.branchId}_` : '';
+      const slotId = item.id || item.slot_id || `${branchPrefix}${slotDate}_${slotTime}`;
 
       // Rule 2: status is 'free' or 'available'
       const isFree = status === 'free' || status === 'available' || status === 'disponible';
@@ -52,17 +53,23 @@ export class RulesEngine {
       const isDifferentDate = Boolean(slotDate && slotDate !== todayStr);
 
       if (isFree && isDifferentDate) {
+        const branchLabel =
+          item.branch ||
+          item.location ||
+          (context?.branchId ? `Medellin (Branch ${context.branchId})` : 'Main Branch');
+
         matchingSlots.push({
           id: slotId,
           date: slotDate,
           time: slotTime,
           status,
-          branch: item.branch || item.location || 'Main Branch',
+          branch: branchLabel,
           specialty: item.specialty || item.service || 'Medicine Dispensing',
-          raw: item,
+          raw: { ...item, branch_id: context?.branchId },
         });
       }
     }
+
 
     if (matchingSlots.length === 0) {
       return {

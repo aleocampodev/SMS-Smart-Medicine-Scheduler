@@ -28,12 +28,13 @@ export class QantyClient {
       return [];
     }
     const defaultPayload = {
-      branch_id: options.branchId || '1',
+      branch_id: options.branchId || env.TARGET_BRANCH_ID || '6035',
       service_id: options.serviceId || '1',
       start_date: options.startDate || env.TARGET_START_DATE,
       end_date: options.endDate || env.TARGET_END_DATE,
       ...options.customPayload,
     };
+
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -86,4 +87,50 @@ export class QantyClient {
       return [];
     }
   }
+
+  /**
+   * Queries POST /p/get_branches to retrieve all branches for the company
+   */
+  public async fetchBranches(sessionCookie?: string): Promise<any[]> {
+    const url = 'https://qanty.com/p/get_branches';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json, text/plain, */*',
+      'User-Agent':
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+      'Referer': env.QANTY_PORTAL_URL,
+      'Origin': 'https://qanty.com',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    };
+
+    if (sessionCookie) {
+      headers['Cookie'] = sessionCookie;
+    }
+
+    try {
+      console.log(`[QantyClient] Querying POST ${url}...`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ c: env.QANTY_COMPANY_CODE }),
+      });
+
+      if (!response.ok) {
+        console.warn(`[QantyClient] Failed to fetch branches: ${response.status}`);
+        return [];
+      }
+
+      const data = (await response.json()) as any;
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.branches)) return data.branches;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.items)) return data.items;
+
+      return [];
+    } catch (error: any) {
+      console.error(`[QantyClient] Error fetching branches:`, error.message);
+      return [];
+    }
+  }
 }
+
