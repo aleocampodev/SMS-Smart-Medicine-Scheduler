@@ -192,6 +192,19 @@ npm start
 
 ---
 
+## 📚 Architecture Decisions & Glossary
+
+- **[Domain & Technical Glossary](docs/glossary.md)**: Standard definitions for domain models, browser patterns, resilient networking, and guardrails.
+- **Architecture Decision Records (ADRs)**:
+  - **[ADR-001: Node.js 20+ & TypeScript Runtime](docs/decisions/ADR-001-TypeScript-And-NodeJS-Runtime.md)** — Rationale for strict TypeScript, Node 20+, and TSX runner.
+  - **[ADR-002: Playwright Web Automation & Traffic Sniffing](docs/decisions/ADR-002-Playwright-Browser-Automation.md)** — Rationale for Playwright over Puppeteer/Selenium with stealth and tracing.
+  - **[ADR-003: Native Fetch with Circuit Breaker](docs/decisions/ADR-003-Native-Fetch-With-Circuit-Breaker.md)** — Rationale for zero-dependency native fetch and G-NET-03 rate protection.
+  - **[ADR-004: grammY Telegram Framework](docs/decisions/ADR-004-Grammy-Telegram-Framework.md)** — Rationale for modern typed bot middleware and inline buttons.
+  - **[ADR-005: Zod Schema Validation](docs/decisions/ADR-005-Zod-Schema-Validation.md)** — Rationale for runtime schema validation, array transforms, and PII protection.
+
+---
+
 ## 📜 License
 
 This project is licensed under the [MIT License](LICENSE).
+
