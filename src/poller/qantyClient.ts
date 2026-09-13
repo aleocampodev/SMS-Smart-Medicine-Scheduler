@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { SessionHarvester } from './sessionHarvester.js';
 
 export interface QantyFetchOptions {
   branchId?: string | number;
@@ -10,11 +11,13 @@ export interface QantyFetchOptions {
 
 export class QantyClient {
   private endpoint: string;
-  // Circuit Breaker (G-NET-03): timestamp until which client is paused
+  private sessionHarvester: SessionHarvester;
+  // Circuit Breaker (P-NET-03): timestamp until which client is paused
   private circuitBreakerUntil: number = 0;
 
-  constructor(endpoint?: string) {
+  constructor(endpoint?: string, sessionHarvester?: SessionHarvester) {
     this.endpoint = endpoint || env.QANTY_SCHEDULE_URL;
+    this.sessionHarvester = sessionHarvester || SessionHarvester.getInstance();
   }
 
   /**
@@ -35,15 +38,11 @@ export class QantyClient {
       ...options.customPayload,
     };
 
-
+    const sessionHeaders = await this.sessionHarvester.getHeaders();
     const headers: Record<string, string> = {
+      ...sessionHeaders,
       'Content-Type': 'application/json',
       'Accept': 'application/json, text/plain, */*',
-      'User-Agent':
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-      'Referer': 'https://qanty.com/',
-      'Origin': 'https://qanty.com',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
     };
 
     try {
@@ -56,8 +55,9 @@ export class QantyClient {
 
       if (!response.ok) {
         console.warn(`[QantyClient] HTTP error ${response.status}: ${response.statusText}`);
-        // Guardrail G-NET-03: 10-minute cooldown (600,000 ms) upon 429 / 403 response
+        // Guardrail P-NET-03: 10-minute cooldown (600,000 ms) upon 429 / 403 response
         if (response.status === 429 || response.status === 403) {
+
           console.error(`[QantyClient:CircuitBreaker] Activated after HTTP ${response.status}. Pausing polling for 10 minutes.`);
           this.circuitBreakerUntil = Date.now() + 10 * 60 * 1000;
         }
@@ -65,6 +65,12 @@ export class QantyClient {
       }
 
       const data = (await response.json()) as any;
+
+      if (data && data.code === 'INVALID_SESSION') {
+        console.warn(`[QantyClient] Qanty returned INVALID_SESSION. Invalidating session cache for refresh...`);
+        this.sessionHarvester.invalidateSession();
+        return [];
+      }
 
       // Extract array based on typical Qanty envelope packaging
       if (Array.isArray(data)) {
@@ -93,11 +99,11 @@ export class QantyClient {
    */
   public async fetchBranches(sessionCookie?: string): Promise<any[]> {
     const url = 'https://qanty.com/p/get_branches';
+    const sessionHeaders = await this.sessionHarvester.getHeaders();
     const headers: Record<string, string> = {
+      ...sessionHeaders,
       'Content-Type': 'application/json',
       'Accept': 'application/json, text/plain, */*',
-      'User-Agent':
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
       'Referer': env.QANTY_PORTAL_URL,
       'Origin': 'https://qanty.com',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -121,6 +127,13 @@ export class QantyClient {
       }
 
       const data = (await response.json()) as any;
+
+      if (data && data.code === 'INVALID_SESSION') {
+        console.warn(`[QantyClient] fetchBranches received INVALID_SESSION. Invalidating session cache...`);
+        this.sessionHarvester.invalidateSession();
+        return [];
+      }
+
       if (Array.isArray(data)) return data;
       if (data && Array.isArray(data.branches)) return data.branches;
       if (data && Array.isArray(data.data)) return data.data;
@@ -132,5 +145,6 @@ export class QantyClient {
       return [];
     }
   }
+
 }
 

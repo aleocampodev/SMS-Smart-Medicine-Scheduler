@@ -11,10 +11,12 @@
     "test:guardrails": "tsx src/tests/testGuardrails.ts",
     "test:adaptive": "tsx src/tests/testAdaptiveScheduler.ts",
     "test:branches": "tsx src/tests/testBranches.ts",
-    "test": "npm run test:rules && npm run test:guardrails && npm run test:adaptive && npm run test:branches",
+    "test:session": "tsx src/tests/testSessionHarvester.ts",
+    "test": "npm run test:rules && npm run test:guardrails && npm run test:adaptive && npm run test:branches && npm run test:session",
     "inspect:api": "tsx src/tools/inspectQantyApi.ts",
     "list:branches": "tsx src/tools/listBranches.ts"
   },
+
 
   "keywords": [],
   "author": "",
