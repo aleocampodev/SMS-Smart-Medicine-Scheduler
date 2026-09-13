@@ -46,8 +46,12 @@ export class RulesEngine {
       const branchPrefix = context?.branchId ? `${context.branchId}_` : '';
       const slotId = item.id || item.slot_id || `${branchPrefix}${slotDate}_${slotTime}`;
 
-      // Rule 2: status is 'free' or 'available'
-      const isFree = status === 'free' || status === 'available' || status === 'disponible';
+      // Rule 2: status is 'free', 'available', 'disponible', or Qanty's 'waiting'
+      const isFree =
+        status === 'free' ||
+        status === 'available' ||
+        status === 'disponible' ||
+        status === 'waiting';
 
       // Rule 3: date is different from today (future slot)
       const isDifferentDate = Boolean(slotDate && slotDate !== todayStr);

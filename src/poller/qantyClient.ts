@@ -9,6 +9,19 @@ export interface QantyFetchOptions {
   customPayload?: Record<string, any>;
 }
 
+export const BRANCH_FIRESTORE_MAP: Record<string, { branchId: string; lineId: string; name: string }> = {
+  '118': {
+    branchId: 'P44gWuLwrWvKAMd7YrHF',
+    lineId: 'G26hsHGJQWHLWsSUghdK',
+    name: 'MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118',
+  },
+  '6035': {
+    branchId: 'ZOLH5f1ydz6XQxFvpL0e',
+    lineId: 'G26hsHGJQWHLWsSUghdK',
+    name: 'MEDELLIN – ANTIOQUIA – NUEVA EPS CR 46 #47 66 LOCAL 6035',
+  },
+};
+
 export class QantyClient {
   private endpoint: string;
   private sessionHarvester: SessionHarvester;
@@ -30,13 +43,39 @@ export class QantyClient {
       console.warn(`[QantyClient:CircuitBreaker] Polling paused defensively for ${waitSeconds}s following prior rate limit.`);
       return [];
     }
-    const defaultPayload = {
-      branch_id: options.branchId || env.TARGET_BRANCH_ID || '6035',
+
+    const requestedBranch = String(options.branchId || env.TARGET_BRANCH_ID || '6035');
+    const branchMapping = BRANCH_FIRESTORE_MAP[requestedBranch];
+    const isRealQanty = this.endpoint.includes('qanty.com');
+
+    // When querying real Qanty host, translate local branch number (118/6035) to Firestore doc ID
+    const targetBranchId = isRealQanty && branchMapping ? branchMapping.branchId : requestedBranch;
+    const targetLineId = options.serviceId || branchMapping?.lineId || 'G26hsHGJQWHLWsSUghdK';
+
+    const sessionId = await this.sessionHarvester.getSessionId();
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const defaultDay = tomorrow.toISOString().split('T')[0];
+    const targetDay = options.startDate || env.TARGET_START_DATE || defaultDay;
+
+    const defaultPayload: Record<string, any> = {
+      company_id: env.QANTY_COMPANY_CODE,
+      branch_id: targetBranchId,
+      line_id: targetLineId,
       service_id: options.serviceId || '1',
-      start_date: options.startDate || env.TARGET_START_DATE,
+      start_date: targetDay,
       end_date: options.endDate || env.TARGET_END_DATE,
+      day: targetDay,
+      session: sessionId,
+      origin: 'appointments',
       ...options.customPayload,
     };
+
+    // Ensure backwards-compatibility for mock endpoints expecting literal branch_id
+    if (!isRealQanty) {
+      defaultPayload.branch_id = options.branchId || env.TARGET_BRANCH_ID || '6035';
+    }
 
     const sessionHeaders = await this.sessionHarvester.getHeaders();
     const headers: Record<string, string> = {
@@ -57,7 +96,6 @@ export class QantyClient {
         console.warn(`[QantyClient] HTTP error ${response.status}: ${response.statusText}`);
         // Guardrail P-NET-03: 10-minute cooldown (600,000 ms) upon 429 / 403 response
         if (response.status === 429 || response.status === 403) {
-
           console.error(`[QantyClient:CircuitBreaker] Activated after HTTP ${response.status}. Pausing polling for 10 minutes.`);
           this.circuitBreakerUntil = Date.now() + 10 * 60 * 1000;
         }
@@ -72,7 +110,28 @@ export class QantyClient {
         return [];
       }
 
-      // Extract array based on typical Qanty envelope packaging
+      // 1. Flatten Qanty nested appointments object: { appointments: { [time]: { "0": {...}, "1": {...} } } }
+      if (data && data.appointments && typeof data.appointments === 'object') {
+        const slots: any[] = [];
+        for (const [timeKey, slotDict] of Object.entries(data.appointments)) {
+          if (slotDict && typeof slotDict === 'object') {
+            for (const [idxKey, slot] of Object.entries(slotDict as Record<string, any>)) {
+              slots.push({
+                ...slot,
+                timeKey,
+                slotIndex: idxKey,
+                date: slot.name ? slot.name.split(' ')[0] : timeKey.split('T')[0],
+                time: slot.name ? slot.name.split(' ')[1] : timeKey.split('T')[1]?.slice(0, 5),
+                branch: branchMapping?.name || `Medellin Branch ${requestedBranch}`,
+                branch_id: requestedBranch,
+              });
+            }
+          }
+        }
+        return slots;
+      }
+
+      // Extract array based on standard Qanty envelope packaging
       if (Array.isArray(data)) {
         return data;
       }
@@ -86,7 +145,7 @@ export class QantyClient {
         return data.schedules;
       }
 
-      console.warn(`[QantyClient] Response format is not a direct array:`, typeof data);
+      console.warn(`[QantyClient] Response format is not a direct array or appointments dictionary:`, typeof data);
       return [];
     } catch (error: any) {
       console.error(`[QantyClient] Error connecting to Qanty API:`, error.message);
@@ -115,10 +174,17 @@ export class QantyClient {
 
     try {
       console.log(`[QantyClient] Querying POST ${url}...`);
+      const sessionId = await this.sessionHarvester.getSessionId();
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ c: env.QANTY_COMPANY_CODE }),
+        body: JSON.stringify({
+          companyId: env.QANTY_COMPANY_CODE,
+          withAppoinmentsEnabled: true,
+          session: sessionId,
+          origin: 'appointments',
+          c: env.QANTY_COMPANY_CODE,
+        }),
       });
 
       if (!response.ok) {
