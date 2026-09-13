@@ -1,0 +1,19 @@
+schema_version: "1.0.0"
+project:
+  name: "sms-smart-medicine-scheduler"
+  description: "Monitor de disponibilidad en Qanty, notificaciones interactivas en Telegram y automatización de reserva con Playwright"
+  version: "1.0.0"
+
+specs:
+  - id: "guardrails"
+    path: "specs/guardrails/spec.md"
+    name: "System Guardrails & Safety Policies"
+  - id: "availability-poller"
+    path: "specs/availability-poller/spec.md"
+    name: "Qanty Polling & Rules Engine"
+  - id: "telegram-notifier"
+    path: "specs/telegram-notifier/spec.md"
+    name: "Telegram Interactive Notification Hub"
+  - id: "playwright-booker"
+    path: "specs/playwright-booker/spec.md"
+    name: "Playwright Multi-Profile Booker"

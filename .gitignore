@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+profiles.json
 screenshots/
 logs/
 .DS_Store

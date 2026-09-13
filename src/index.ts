@@ -47,11 +47,20 @@ async function main() {
     }
   };
 
-  // Ejecutar primer ciclo inmediatamente
-  await pollCycle();
+  // Programar ejecuciones con jitter aleatorio (G-NET-02)
+  const scheduleNextPoll = () => {
+    // Jitter aleatorio entre -5s y +10s
+    const jitterSeconds = Math.floor(Math.random() * 16) - 5;
+    const intervalMs = Math.max(30, env.POLL_INTERVAL_SECONDS + jitterSeconds) * 1000;
+    setTimeout(async () => {
+      await pollCycle();
+      scheduleNextPoll();
+    }, intervalMs);
+  };
 
-  // Programar ejecuciones periódicas
-  setInterval(pollCycle, env.POLL_INTERVAL_SECONDS * 1000);
+  // Ejecutar primer ciclo inmediatamente y programar siguientes con jitter
+  await pollCycle();
+  scheduleNextPoll();
 }
 
 main().catch((err) => {

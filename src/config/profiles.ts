@@ -32,3 +32,16 @@ export function getProfileById(id: string): Profile | undefined {
   const profiles = loadProfiles();
   return profiles.find((p) => p.id === id);
 }
+
+/**
+ * Enmascara números de documentos personales para logs y vistas públicas (G-SEC-02)
+ * Ej: 1234567890 -> *******7890
+ */
+export function maskDocument(documentNumber: string): string {
+  if (!documentNumber || documentNumber.length <= 4) {
+    return '****';
+  }
+  const visiblePart = documentNumber.slice(-4);
+  const maskedPart = '*'.repeat(documentNumber.length - 4);
+  return `${maskedPart}${visiblePart}`;
+}

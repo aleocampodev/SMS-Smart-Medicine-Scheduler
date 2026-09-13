@@ -10,6 +10,8 @@ export interface QantyFetchOptions {
 
 export class QantyClient {
   private endpoint: string;
+  // Circuit Breaker (G-NET-03): timestamp hasta cuando el cliente está pausado
+  private circuitBreakerUntil: number = 0;
 
   constructor(endpoint?: string) {
     this.endpoint = endpoint || env.QANTY_SCHEDULE_URL;
@@ -19,6 +21,12 @@ export class QantyClient {
    * Consulta el endpoint POST /p/appointments/list_day_schedule
    */
   public async fetchDaySchedule(options: QantyFetchOptions = {}): Promise<any[]> {
+    const now = Date.now();
+    if (now < this.circuitBreakerUntil) {
+      const waitSeconds = Math.ceil((this.circuitBreakerUntil - now) / 1000);
+      console.warn(`[QantyClient:CircuitBreaker] Sondeo en pausa preventiva por ${waitSeconds}s tras bloqueo previo.`);
+      return [];
+    }
     const defaultPayload = {
       branch_id: options.branchId || '1',
       service_id: options.serviceId || '1',
@@ -47,6 +55,11 @@ export class QantyClient {
 
       if (!response.ok) {
         console.warn(`[QantyClient] HTTP error ${response.status}: ${response.statusText}`);
+        // Guardrail G-NET-03: Pausa de 10 minutos (600,000 ms) si se detecta rate limit o bloqueo
+        if (response.status === 429 || response.status === 403) {
+          console.error(`[QantyClient:CircuitBreaker] Activado tras HTTP ${response.status}. Pausando peticiones por 10 minutos.`);
+          this.circuitBreakerUntil = Date.now() + 10 * 60 * 1000;
+        }
         return [];
       }
 

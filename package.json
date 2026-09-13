@@ -7,7 +7,9 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "test:rules": "tsx src/tests/testRules.ts"
+    "test:rules": "tsx src/tests/testRules.ts",
+    "test:guardrails": "tsx src/tests/testGuardrails.ts",
+    "test": "npm run test:rules && npm run test:guardrails"
   },
   "keywords": [],
   "author": "",

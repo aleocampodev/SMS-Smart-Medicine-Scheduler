@@ -36,7 +36,7 @@ export class TelegramBotService {
       );
     });
 
-    // Comando /perfiles
+    // Comando /perfiles (con enmascaramiento G-SEC-02)
     this.bot.command('perfiles', async (ctx) => {
       const profiles = loadProfiles();
       if (profiles.length === 0) {
@@ -45,7 +45,7 @@ export class TelegramBotService {
       }
 
       const list = profiles
-        .map((p) => `• *${p.displayName}* (${p.documentType} ${p.documentNumber})`)
+        .map((p) => `• *${p.displayName}* (${p.documentType} \`${p.documentNumber.slice(-4).padStart(p.documentNumber.length, '*')}\`)`)
         .join('\n');
 
       await ctx.reply(`📋 *Perfiles disponibles para agendamiento:*\n\n${list}`, {
