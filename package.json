@@ -10,7 +10,8 @@
     "test:rules": "tsx src/tests/testRules.ts",
     "test:guardrails": "tsx src/tests/testGuardrails.ts",
     "test:adaptive": "tsx src/tests/testAdaptiveScheduler.ts",
-    "test": "npm run test:rules && npm run test:guardrails && npm run test:adaptive"
+    "test": "npm run test:rules && npm run test:guardrails && npm run test:adaptive",
+    "inspect:api": "tsx src/tools/inspectQantyApi.ts"
   },
   "keywords": [],
   "author": "",

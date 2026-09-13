@@ -17,3 +17,6 @@ specs:
   - id: "playwright-booker"
     path: "specs/playwright-booker/spec.md"
     name: "Playwright Multi-Profile Booker"
+  - id: "api-discovery"
+    path: "specs/api-discovery/spec.md"
+    name: "Qanty Portal API Discovery & Traffic Sniffer"
