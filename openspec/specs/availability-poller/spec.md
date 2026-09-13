@@ -7,24 +7,24 @@
 
 ---
 
-## 1. Propósito y Alcance
+## 1. Purpose & Scope
 
-Este módulo es el sensor primario del sistema. Su responsabilidad exclusiva es consultar la API de horarios de Qanty de forma resiliente y determinar, mediante la aplicación determinista de 3 reglas de negocio, si existen turnos legítimos disponibles para alertar al usuario.
+This module serves as the primary sensor of the system. Its sole responsibility is querying the Qanty appointment schedule endpoint and determining, through deterministic evaluation of the 3 business rules, whether genuine available slots exist to notify the user.
 
 ---
 
-## 2. Contrato de Integración de la API Qanty
+## 2. API Integration Contract
 
-### 2.1. Especificación del Endpoint
+### 2.1. Endpoint Specification
 - **URL**: `https://qanty.com/p/appointments/list_day_schedule`
-- **Método HTTP**: `POST`
-- **Headers Obligatorios**:
+- **HTTP Method**: `POST`
+- **Mandatory Headers**:
   - `Content-Type`: `application/json`
   - `Accept`: `application/json, text/plain, */*`
-  - `User-Agent`: Navegador de escritorio verificado (Chrome en Linux/Windows)
+  - `User-Agent`: Realistic desktop browser signature
   - `Referer`: `https://qanty.com/`
   - `Referrer-Policy`: `strict-origin-when-cross-origin`
-- **Payload Base**:
+- **Base Payload**:
   ```json
   {
     "branch_id": "string | number",
@@ -36,35 +36,35 @@ Este módulo es el sensor primario del sistema. Su responsabilidad exclusiva es 
 
 ---
 
-## 3. Motor de Validación de las 3 Reglas
+## 3. The 3 Business Rules Engine
 
-El motor de reglas actúa como el primer filtro de integridad antes de emitir cualquier evento:
+The rules engine acts as an integrity gate before any notification event is dispatched:
 
 ```mermaid
 flowchart TD
-    Raw[JSON Response de Qanty] --> R1{¿items.length > 2?\nRegla 1}
-    R1 -- No --> Reject1[Rechazar: Respuesta vacía o insuficiente]
-    R1 -- Sí --> Loop[Iterar cada slot]
-    Loop --> R2{¿status == 'free'?\nRegla 2}
-    R2 -- No --> SkipSlot[Descartar slot ocupado]
-    R2 -- Sí --> R3{¿date != currentDate?\nRegla 3}
-    R3 -- No --> SkipToday[Descartar: Cita es de hoy]
-    R3 -- Sí --> Match[Agregar a slots válidos]
-    Match --> Dedupe{¿Slot ya notificado?\n(State Store)}
-    Dedupe -- Sí --> Ignored[Ignorar: Evitar spam]
-    Dedupe -- No --> Alert[Emitir evento hacia Telegram]
+    Raw[Raw JSON Response from Qanty] --> R1{items.length > 2?\nRule 1}
+    R1 -- No --> Reject1[Reject: Empty or static template response]
+    R1 -- Yes --> Loop[Iterate each slot]
+    Loop --> R2{status == 'free'?\nRule 2}
+    R2 -- No --> SkipSlot[Discard occupied slot]
+    R2 -- Yes --> R3{date != currentDate?\nRule 3}
+    R3 -- No --> SkipToday[Discard: Slot is today]
+    R3 -- Yes --> Match[Add to valid slots list]
+    Match --> Dedupe{Slot already notified?\nState Store}
+    Dedupe -- Yes --> Ignored[Ignore: Prevent duplicate spam]
+    Dedupe -- No --> Alert[Emit event to Telegram]
 ```
 
-### 3.1. Definición Formal de las Reglas
-1. **Regla 1 (Multiplicidad de Datos)**: La API debe retornar más de 2 objetos JSON (`rawItems.length > 2`). Si retorna 0, 1 o 2 objetos, se interpreta como respuesta vacía, plantilla estática o error no estructurado.
-2. **Regla 2 (Estado Libre)**: El campo `status` o `state` debe ser explícitamente `'free'`, `'disponible'` o `'available'`.
-3. **Regla 3 (Fecha Futura / Diferente a Hoy)**: El campo `date` o `day` no debe coincidir con la fecha actual del sistema (`slot.date !== currentDate`). Esto evita intentar agendar citas del mismo día que suelen tener restricciones de horario límite o ya están cerradas.
+### 3.1. Formal Definition of the 3 Rules
+1. **Rule 1 (Data Multiplicity)**: The API must return more than 2 items (`rawItems.length > 2`). Responses with 0, 1, or 2 items indicate empty schedule frames or static placeholder responses.
+2. **Rule 2 (Availability Status)**: The slot's `status` or `state` field must be explicitly `'free'` or `'available'`.
+3. **Rule 3 (Future Date Only)**: The slot's `date` or `day` must not match the current date (`slot.date !== currentDate`). Same-day appointments are excluded due to cutoff deadlines and clinic closures.
 
 ---
 
-## 4. Guardrails Aplicados en esta Capa
+## 4. Enforced Guardrails in this Layer
 
-- **`G-NET-01`**: Frecuencia mínima de sondeo de 30 segundos.
-- **`G-NET-02`**: Jitter pseudo-aleatorio de $\pm 5$ a $15$ segundos en cada ciclo.
-- **`G-NET-03`**: Circuit Breaker que pausa el sondeo por 10 minutos si la API responde con códigos `429` o `403`.
-- **`G-BIZ-02`**: Deduplicación con State Store para garantizar $0$ mensajes duplicados en Telegram.
+- **`G-NET-01`**: Minimum baseline polling interval of 30 seconds.
+- **`G-NET-02`**: Anti-fingerprinting random jitter ($\pm 5\text{s}$ to $\pm 15\text{s}$) on every cycle.
+- **`G-NET-03`**: Circuit Breaker pausing requests for 10 minutes upon HTTP 429 or 403 responses.
+- **`G-BIZ-02`**: State Store deduplication guaranteeing zero duplicate alerts in Telegram.

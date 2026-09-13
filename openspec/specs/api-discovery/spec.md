@@ -3,60 +3,60 @@
 **ID**: `api-discovery`  
 **Version**: `1.0.0`  
 **Status**: `Active`  
-**Scope**: Infiltración pasiva, intercepción de tráfico de red y captura de esquemas reales de la API de Qanty desde el portal de dispensación (`?c=Lpds45xBMVIpsXiSxaTy`).
+**Scope**: Passive traffic sniffing, network interception, and live schema extraction from the Qanty dispensary portal (`?c=Lpds45xBMVIpsXiSxaTy`).
 
 ---
 
-## 1. Propósito y Alcance
+## 1. Purpose & Scope
 
-Para que el poller y el motor de reservas funcionen de forma determinista y sin errores de schema, se requiere una herramienta de ingeniería inversa y descubrimiento que:
-1. Navegue al portal real de Qanty (`https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`).
-2. Intercepte **todas las peticiones XHR / Fetch** emitidas por la aplicación Single Page Application (SPA).
-3. Guarde los payloads exactos enviados y recibidos (headers, query params, cookies, body JSON).
-4. Extraiga los IDs reales de sedes (`branch_id`), servicios (`service_id`) y el formato exacto de respuesta de `/p/appointments/list_day_schedule`.
+To ensure the poller and booking engine operate deterministically without schema guesswork, this module:
+1. Navigates to the real Qanty portal (`https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`).
+2. Intercepts **all XHR / Fetch network requests** emitted by the SPA.
+3. Records full request and response payloads (headers, query params, cookies, JSON bodies).
+4. Extracts actual dispensary branch IDs (`branch_id`), service IDs (`service_id`), and the exact response format of `/p/appointments/list_day_schedule`.
 
 ---
 
-## 2. Requerimientos Funcionales
+## 2. Functional Requirements
 
 ```
 +-------------------------------------------------------------+
 |               Playwright Network Interceptor                |
 +------------------------------+------------------------------+
                                |
-               Navega a portal con c=Lpds45xBMVIpsXiSxaTy
+            Navigates to portal with c=Lpds45xBMVIpsXiSxaTy
                                |
                                v
             +------------------------------------+
-            | Intercepta page.on('request')      |
-            | Intercepta page.on('response')     |
+            | Intercepts page.on('request')      |
+            | Intercepts page.on('response')     |
             +------------------+-----------------+
                                |
-               Filtra tráfico hacia https://qanty.com/*
+               Filters traffic to https://qanty.com/*
                                |
                                v
              +----------------------------------+
-             | Exporta dumps/api/<timestamp>/   |
-             | - request_<endpoint>.json        |
-             | - response_<endpoint>.json       |
-             | - summary_discovered.json        |
+             | Exports dumps/api/<timestamp>/   |
+             | - req_<endpoint>.json            |
+             | - res_<endpoint>.json            |
+             | - discovered_summary.json        |
              +----------------------------------+
 ```
 
-### 2.1. Entradas
-- `targetUrl`: URL completa del portal (`https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`).
-- `mode`: Modo `headful` (para permitir al usuario seleccionar sede o resolver captcha si es necesario) o `headless`.
+### 2.1. Inputs
+- `targetUrl`: Portal URL (`https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`).
+- `mode`: Headful mode (to allow interactive branch selection) or headless.
 
-### 2.2. Salidas
-- Directorio de volcados: `dumps/api/` (ignorado en git).
-- Archivo consolidado: `dumps/api/discovered_endpoints.json` con:
-  - Endpoints detectados (`POST /p/appointments/list_day_schedule`, `/p/regular_start`, etc.).
-  - Headers de autenticación o tokens de sesión observados.
-  - Parámetros necesarios en el body para consultar la disponibilidad.
+### 2.2. Outputs
+- Dumps directory: `dumps/api/` (ignored in git).
+- Summary file: `dumps/api/discovered_summary.json` containing:
+  - Detected endpoints.
+  - Active session tokens and headers.
+  - Request body parameters for availability queries.
 
 ---
 
-## 3. Guardrails Aplicados
+## 3. Enforced Guardrails
 
-- **`G-SEC-01`**: Los volcados en `dumps/` deben estar en `.gitignore` para no filtrar tokens temporales en Git.
-- **`G-NET-04`**: El sniffer debe usar User-Agent y flags stealth (`--disable-blink-features=AutomationControlled`) para que el portal cargue sin bloqueos de reCAPTCHA.
+- **`G-SEC-01`**: Dumps in `dumps/` are strictly gitignored to prevent leaking temporary tokens.
+- **`G-NET-04`**: The sniffer uses stealth flags (`--disable-blink-features=AutomationControlled`) to prevent reCAPTCHA blocks.

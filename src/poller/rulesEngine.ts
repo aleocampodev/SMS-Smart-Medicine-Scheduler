@@ -1,11 +1,11 @@
 import { QantySlot, RuleEvaluationResult } from '../types/index.js';
 
 export class RulesEngine {
-  // Guarda hashes o IDs de slots ya notificados para no repetir alertas cada 30s
+  // Stores hashes/IDs of already notified slots to avoid repeating alerts every cycle
   private notifiedSlots: Set<string> = new Set();
 
   /**
-   * Formatea la fecha de hoy en formato YYYY-MM-DD en hora local
+   * Formats today's date as YYYY-MM-DD in local time
    */
   private getTodayString(): string {
     const today = new Date();
@@ -16,40 +16,39 @@ export class RulesEngine {
   }
 
   /**
-   * Evalúa las 3 reglas del diagrama:
-   * 1. Trae más de dos JSON / slots
-   * 2. Status 'free'
-   * 3. Fechas diferentes a la fecha actual (current date)
+   * Evaluates the 3 business rules from the specification:
+   * 1. Multiplicity: Returns more than two items/slots (> 2)
+   * 2. Availability: status === 'free' (or 'available')
+   * 3. Future Date: date !== current date (excludes same-day slots)
    */
   public evaluate(rawItems: any[]): RuleEvaluationResult {
     const reasons: string[] = [];
     const todayStr = this.getTodayString();
 
-    // Regla 1: Trae más de 2 items/JSON
+    // Rule 1: Array contains more than 2 items
     if (!Array.isArray(rawItems) || rawItems.length <= 2) {
       return {
         hasAvailability: false,
         matchingSlots: [],
-        reasons: [`No cumple Regla 1: se recibieron ${rawItems?.length || 0} items (debe ser > 2)`],
+        reasons: [`Fails Rule 1: received ${rawItems?.length || 0} items (expected > 2)`],
       };
     }
 
-    reasons.push(`Cumple Regla 1: cantidad de items recibidos (${rawItems.length}) > 2`);
+    reasons.push(`Passes Rule 1: items count (${rawItems.length}) > 2`);
 
-    // Parsear y evaluar Regla 2 y Regla 3
+    // Parse and evaluate Rule 2 and Rule 3
     const matchingSlots: QantySlot[] = [];
 
     for (const item of rawItems) {
-      // Normalizar estructura común de Qanty / agendamiento
       const status = (item.status || item.state || '').toString().toLowerCase();
       const slotDate = (item.date || item.appointment_date || item.day || '').toString().split('T')[0];
       const slotTime = (item.time || item.hour || item.start_time || '').toString();
       const slotId = item.id || item.slot_id || `${slotDate}_${slotTime}`;
 
-      // Regla 2: status == 'free' o 'disponible'
-      const isFree = status === 'free' || status === 'disponible' || status === 'available';
+      // Rule 2: status is 'free' or 'available'
+      const isFree = status === 'free' || status === 'available' || status === 'disponible';
 
-      // Regla 3: fecha diferente a hoy (y preferiblemente fecha futura)
+      // Rule 3: date is different from today (future slot)
       const isDifferentDate = Boolean(slotDate && slotDate !== todayStr);
 
       if (isFree && isDifferentDate) {
@@ -58,8 +57,8 @@ export class RulesEngine {
           date: slotDate,
           time: slotTime,
           status,
-          branch: item.branch || item.location || 'Sede Principal',
-          specialty: item.specialty || item.service || 'Dispensación Medicamentos',
+          branch: item.branch || item.location || 'Main Branch',
+          specialty: item.specialty || item.service || 'Medicine Dispensing',
           raw: item,
         });
       }
@@ -71,13 +70,13 @@ export class RulesEngine {
         matchingSlots: [],
         reasons: [
           ...reasons,
-          'No cumple Reglas 2 o 3: no se encontraron slots libres con fecha diferente a hoy',
+          'Fails Rule 2 or 3: no free slots found for dates different from today',
         ],
       };
     }
 
     reasons.push(
-      `Cumple Regla 2 y 3: se encontraron ${matchingSlots.length} slots libres para fechas posteriores a hoy`,
+      `Passes Rules 2 & 3: found ${matchingSlots.length} available slots for future dates`,
     );
 
     return {
@@ -88,7 +87,7 @@ export class RulesEngine {
   }
 
   /**
-   * Filtra únicamente los slots que no han sido alertados previamente
+   * Filters out slots that have already been notified
    */
   public filterUnnotifiedSlots(slots: QantySlot[]): QantySlot[] {
     const newSlots = slots.filter((slot) => {
@@ -100,7 +99,7 @@ export class RulesEngine {
       return true;
     });
 
-    // Limpieza de memoria si el set crece demasiado (> 5000)
+    // Memory management: purge cache if size exceeds 5000 entries
     if (this.notifiedSlots.size > 5000) {
       this.notifiedSlots.clear();
     }

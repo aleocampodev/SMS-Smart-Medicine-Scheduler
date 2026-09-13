@@ -7,59 +7,58 @@
 
 ---
 
-## 1. Propósito y Alcance
+## 1. Purpose & Scope
 
-Este módulo gestiona la interfaz interactiva con el usuario humano vía Telegram. Actúa como el puente de decisión ("Human-in-the-Loop") para autorizar reservas y recibir comprobantes fotográficos en tiempo real.
+This module manages real-time human interaction via Telegram. It serves as the critical "Human-in-the-Loop" decision gateway for authorizing bookings and receiving photo confirmation receipts in real-time.
 
 ---
 
-## 2. Flujo de Interacción y Botones Dinámicos
+## 2. Interaction Flow & Dynamic Buttons
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Usuario Humano
+    actor User as Human User
     participant TG as Telegram Bot
     participant Core as Scheduler Core
     participant Worker as Playwright Booker
 
     Core->>TG: sendAvailabilityAlert(slot, profiles)
-    TG->>User: 🚨 Mensaje con Inline Keyboard:<br/>[👤 Reservar Juan] [👤 Reservar María]<br/>[❌ Descartar]
-    User->>TG: Presiona [👤 Reservar Juan]
+    TG->>User: 🚨 Alert with Inline Keyboard:<br/>[👤 Book Alex] [👤 Book Mom]<br/>[❌ Dismiss]
+    User->>TG: Taps [👤 Book Alex]
     TG->>Core: CallbackQuery: "book:slot_key:persona_1"
-    TG-->>User: 🚀 "Iniciando reserva para Juan..."
+    TG-->>User: 🚀 "Starting booking for Alex..."
     Core->>Worker: bookAppointment(slot, profile)
     Worker-->>Core: Result (Success=true, Screenshot, Latency)
-    Core->>TG: Enviar Foto con Comprobante
-    TG->>User: ✅ Foto del comprobante de reserva con fecha y hora
+    Core->>TG: Send Photo Receipt
+    TG->>User: ✅ Screenshot receipt with date, time, and status
 ```
 
 ---
 
-## 3. Especificación de Mensajería y Teclados Inline
+## 3. Messaging & Inline Keyboard Specification
 
-### 3.1. Mensaje de Alerta de Disponibilidad
+### 3.1. Availability Alert Message
 ```text
-🚨 *¡CITA DISPONIBLE ENCONTRADA EN QANTY!*
+🚨 *AVAILABLE MEDICINE PICKUP SLOT DETECTED!*
 
-📅 *Fecha:* `2026-10-20`
-⏰ *Hora:* `08:30 AM`
-🏢 *Sede:* `Sede Principal`
-💊 *Servicio:* `Dispensación Medicamentos`
+📅 *Date:* `2026-10-20`
+⏰ *Time:* `08:30 AM`
+🏢 *Branch:* `Main Dispensary`
+💊 *Service:* `Prescription Medicine Pickup`
 
-👇 *Selecciona la persona para agendar de inmediato:*
-[ 👤 Reservar para Alex ] [ 👤 Reservar para Mamá ]
-[ ❌ Descartar ]
+👇 *Select profile to book immediately:*
+[ 👤 Book Alex ] [ 👤 Book Mom ]
+[ ❌ Dismiss ]
 ```
 
-### 3.2. Formato del Callback Data
-El payload de cada botón inline sigue la convención compacta:
-`book:<slotHash>:<profileId>` o `dismiss:<slotHash>`.
+### 3.2. Callback Data Format
+Compact payload format: `book:<slotHash>:<profileId>` or `dismiss:<slotHash>`.
 
 ---
 
-## 4. Guardrails Aplicados en esta Capa
+## 4. Enforced Guardrails in this Layer
 
-- **`G-ACT-01` (Human-in-the-Loop)**: Ninguna cita es reservada sin la pulsación de un botón interactivo del teclado inline.
-- **`G-SEC-02` (Data Masking)**: Los comandos de consulta (como `/perfiles`) ocultan los dígitos sensibles de los documentos de identidad (`******7890`).
-- **`G-ACT-05` (Evidencia Auditada)**: La respuesta del proceso siempre devuelve una captura visual (`screenshot`) adjunta al mensaje de confirmación o fallo.
+- **`G-ACT-01` (Human-in-the-Loop)**: No appointment is booked without explicit button click confirmation.
+- **`G-SEC-02` (Data Masking)**: Profile queries (e.g. `/profiles`) mask document IDs (`******7890`).
+- **`G-ACT-05` (Audited Evidence)**: Booking results always deliver a timestamped PNG screenshot back to Telegram.

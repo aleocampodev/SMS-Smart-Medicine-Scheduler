@@ -5,7 +5,7 @@ import { env } from '../config/env.js';
 
 async function inspectQantyApi() {
   console.log('===========================================================');
-  console.log('🔍 INICIANDO DESCUBRIMIENTO DE LA API DE QANTY (IP-001)');
+  console.log('🔍 STARTING QANTY API DISCOVERY & TRAFFIC SNIFFER (IP-001)');
   console.log('===========================================================');
 
   const dumpsDir = path.resolve(process.cwd(), 'dumps', 'api');
@@ -14,11 +14,11 @@ async function inspectQantyApi() {
   }
 
   const targetUrl = env.QANTY_PORTAL_URL;
-  console.log(`[Sniffer] URL Objetivo: ${targetUrl}`);
-  console.log(`[Sniffer] Guardando volcados de red en: ${dumpsDir}\n`);
+  console.log(`[Sniffer] Target URL: ${targetUrl}`);
+  console.log(`[Sniffer] Saving network dumps at: ${dumpsDir}\n`);
 
   const browser = await chromium.launch({
-    headless: false, // Abrir ventana visible para que el usuario pueda ver/interactuar si lo desea
+    headless: false, // Visible window so user can interact and select clinic/service
     args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
   });
 
@@ -33,7 +33,7 @@ async function inspectQantyApi() {
   let captureCount = 0;
   const discoveredEndpoints: any[] = [];
 
-  // 1. Interceptar solicitudes salientes
+  // 1. Intercept outgoing requests
   page.on('request', async (request) => {
     const url = request.url();
     if (url.includes('qanty.com/p/') || url.includes('qanty.com/api/')) {
@@ -57,12 +57,12 @@ async function inspectQantyApi() {
     }
   });
 
-  // 2. Interceptar respuestas entrantes
+  // 2. Intercept incoming responses
   page.on('response', async (response) => {
     const url = response.url();
     if (url.includes('qanty.com/p/') || url.includes('qanty.com/api/')) {
       const status = response.status();
-      console.log(`⬅️ [RESPONSE] Status ${status} para ${url}`);
+      console.log(`⬅️ [RESPONSE] Status ${status} for ${url}`);
 
       try {
         const text = await response.text();
@@ -89,27 +89,27 @@ async function inspectQantyApi() {
           )
         );
       } catch {
-        // Ignorar si no es parseable
+        // Ignore if unparseable
       }
     }
   });
 
-  console.log('[Sniffer] Navegando al portal...');
+  console.log('[Sniffer] Navigating to target portal...');
   try {
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   } catch (err: any) {
-    console.warn(`[Sniffer] Advertencia al cargar:`, err.message);
+    console.warn(`[Sniffer] Load notice:`, err.message);
   }
 
-  console.log('\n👀 La ventana del navegador permanecerá abierta por 45 segundos.');
-  console.log('   (Puedes hacer clic en la página o seleccionar sede para capturar el tráfico)');
+  console.log('\n👀 Browser window will remain open for 45 seconds.');
+  console.log('   (Feel free to click or select branches in the UI to capture network traffic)');
 
   await page.waitForTimeout(45000);
 
-  // Guardar resumen consolidado
+  // Save consolidated summary
   const summaryPath = path.join(dumpsDir, 'discovered_summary.json');
   fs.writeFileSync(summaryPath, JSON.stringify(discoveredEndpoints, null, 2));
-  console.log(`\n✅ Resumen consolidado guardado en: ${summaryPath}`);
+  console.log(`\n✅ Consolidated summary saved to: ${summaryPath}`);
 
   await browser.close();
 }

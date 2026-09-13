@@ -11,46 +11,46 @@ async function main() {
   console.log('====================================================');
 
   const profiles = loadProfiles();
-  console.log(`[Config] Perfiles cargados: ${profiles.length}`);
+  console.log(`[Config] Loaded profiles: ${profiles.length}`);
   profiles.forEach((p) => console.log(`  - ${p.displayName} (${p.documentType} ${p.documentNumber})`));
 
   const qantyClient = new QantyClient();
   const rulesEngine = new RulesEngine();
   const botService = new TelegramBotService();
 
-  // Iniciar bot de Telegram
+  // Start Telegram bot listener
   await botService.start();
 
-  console.log(`[Poller] Iniciando ciclo de monitoreo cada ${env.POLL_INTERVAL_SECONDS} segundos...`);
+  console.log(`[Poller] Starting monitoring loop with base interval of ${env.POLL_INTERVAL_SECONDS}s...`);
 
   const pollCycle = async () => {
     try {
-      console.log(`\n[Poller] [${new Date().toISOString()}] Consultando disponibilidad en Qanty...`);
+      console.log(`\n[Poller] [${new Date().toISOString()}] Checking appointment availability in Qanty...`);
       const rawData = await qantyClient.fetchDaySchedule();
 
       const evaluation = rulesEngine.evaluate(rawData);
-      console.log(`[RulesEngine] Resultado de evaluación:`, evaluation.reasons);
+      console.log(`[RulesEngine] Evaluation results:`, evaluation.reasons);
 
       if (evaluation.hasAvailability) {
         const newSlots = rulesEngine.filterUnnotifiedSlots(evaluation.matchingSlots);
 
         if (newSlots.length > 0) {
-          console.log(`[Poller] ¡${newSlots.length} nuevos slots detectados para alertar!`);
+          console.log(`[Poller] 🚨 Found ${newSlots.length} new available slots to notify!`);
           for (const slot of newSlots) {
             await botService.sendAvailabilityAlert(slot, profiles);
           }
         } else {
-          console.log(`[Poller] Citas encontradas ya fueron notificadas previamente.`);
+          console.log(`[Poller] Available slots were already notified previously.`);
         }
       }
     } catch (err: any) {
-      console.error(`[Poller] Error en ciclo de sondeo:`, err.message);
+      console.error(`[Poller] Polling cycle error:`, err.message);
     }
   };
 
   const adaptiveScheduler = new AdaptiveScheduler();
 
-  // Programar ejecuciones inteligentes según el ciclo diario (Opción A)
+  // Schedule next polling using smart adaptive daily timeline (Option A)
   const scheduleNextPoll = () => {
     const adaptive = adaptiveScheduler.getAdaptiveInterval(new Date(), env.POLL_INTERVAL_SECONDS);
     console.log(`[Scheduler:Adaptive] ${adaptive.description}`);
@@ -61,7 +61,7 @@ async function main() {
     }, adaptive.intervalMs);
   };
 
-  // Ejecutar primer ciclo inmediatamente y programar siguientes con horario inteligente
+  // Run initial check immediately and schedule subsequent checks
   await pollCycle();
   scheduleNextPoll();
 }

@@ -9,7 +9,7 @@ export interface AdaptiveIntervalResult {
 
 export class AdaptiveScheduler {
   /**
-   * Obtiene la hora y minuto actual en la zona horaria local
+   * Retrieves current hour and minute in local time
    */
   public getCurrentTimeDetails(date: Date = new Date()): { hour: number; minute: number; timeDecimal: number } {
     const hour = date.getHours();
@@ -19,65 +19,65 @@ export class AdaptiveScheduler {
   }
 
   /**
-   * Calcula el intervalo óptimo y seguro según la franja horaria del día (Opción A)
+   * Calculates optimal and safe polling interval based on time of day with anti-fingerprint jitter
    */
   public getAdaptiveInterval(date: Date = new Date(), baseOverrideSeconds?: number): AdaptiveIntervalResult {
     const { hour, minute, timeDecimal } = this.getCurrentTimeDetails(date);
 
-    // Ventana 1: Medianoche (23:55 a 00:20) - Reset diario de agenda
+    // Window 1: Midnight schedule reset (23:55 to 00:20)
     const isMidnightWindow = (hour === 23 && minute >= 55) || (hour === 0 && minute <= 20);
 
-    // Ventana 2: Mañana pico (06:45 a 09:15) - Apertura de agendas
+    // Window 2: Morning peak opening (06:45 to 09:15)
     const isMorningPeak = timeDecimal >= 6.75 && timeDecimal <= 9.25;
 
-    // Ventana 3: Mediodía pico (11:50 a 13:15) - Actualización de citas canceladas
+    // Window 3: Midday cancellation peak (11:50 to 13:15)
     const isMiddayPeak = timeDecimal >= 11.83 && timeDecimal <= 13.25;
 
-    // FASE 1: HORAS PICO (Fast Polling: 35s - 50s)
+    // PHASE 1: PEAK HOURS (Fast Polling: 35s - 50s)
     if (isMidnightWindow || isMorningPeak || isMiddayPeak) {
       const base = baseOverrideSeconds || 40;
-      const jitter = Math.floor(Math.random() * 16) - 5; // -5s a +10s
+      const jitter = Math.floor(Math.random() * 16) - 5; // -5s to +10s
       const seconds = Math.max(30, base + jitter);
       return {
         intervalMs: seconds * 1000,
         intervalSeconds: seconds,
         phase: 'PEAK',
-        description: `🔥 Hora Pico (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Monitoreo rápido cada ${seconds}s`,
+        description: `🔥 Peak Hours (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Fast check every ${seconds}s`,
       };
     }
 
-    // FASE 2: DÍA HÁBIL NORMAL (09:15 a 18:00) - Polling cada ~2 minutos
+    // PHASE 2: STANDARD BUSINESS DAY (09:15 to 18:00) - Polling every ~2 minutes
     if (timeDecimal > 9.25 && timeDecimal < 18.0) {
-      const jitter = Math.floor(Math.random() * 31) - 15; // -15s a +15s
-      const seconds = 120 + jitter; // ~105s a 135s (aprox 2 min)
+      const jitter = Math.floor(Math.random() * 31) - 15; // -15s to +15s
+      const seconds = 120 + jitter; // ~105s to 135s (~2 mins)
       return {
         intervalMs: seconds * 1000,
         intervalSeconds: seconds,
         phase: 'DAYTIME',
-        description: `🟡 Horario Normal (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Rastreo de cancelaciones cada ${seconds}s (~2 min)`,
+        description: `🟡 Regular Hours (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Cancellation tracking every ${seconds}s (~2 min)`,
       };
     }
 
-    // FASE 3: TARDE / NOCHE (18:00 a 23:55) - Polling cada ~5 minutos
+    // PHASE 3: EVENING (18:00 to 23:55) - Polling every ~5 minutes
     if (timeDecimal >= 18.0 && !(hour === 23 && minute >= 55)) {
-      const jitter = Math.floor(Math.random() * 41) - 20; // -20s a +20s
-      const seconds = 300 + jitter; // ~280s a 320s (aprox 5 min)
+      const jitter = Math.floor(Math.random() * 41) - 20; // -20s to +20s
+      const seconds = 300 + jitter; // ~280s to 320s (~5 mins)
       return {
         intervalMs: seconds * 1000,
         intervalSeconds: seconds,
         phase: 'EVENING',
-        description: `☕ Tarde/Noche (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Monitoreo pasivo cada ${Math.round(seconds / 60)} min`,
+        description: `☕ Evening Hours (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Passive check every ${Math.round(seconds / 60)} min`,
       };
     }
 
-    // FASE 4: NOCHE PROFUNDA / DORMIDO (00:20 a 06:45) - Polling cada 15 minutos para proteger IP
-    const jitter = Math.floor(Math.random() * 121) - 60; // -60s a +60s
-    const seconds = 900 + jitter; // ~14 a 16 min
+    // PHASE 4: DEEP NIGHT / SLEEP (00:20 to 06:45) - Polling every ~15 minutes to protect IP
+    const jitter = Math.floor(Math.random() * 121) - 60; // -60s to +60s
+    const seconds = 900 + jitter; // ~14 to 16 min
     return {
       intervalMs: seconds * 1000,
       intervalSeconds: seconds,
       phase: 'NIGHT',
-      description: `💤 Noche Profunda (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Modo reposo protector de IP (~15 min)`,
+      description: `💤 Night Repose (${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}) — Sleep mode protecting IP (~15 min)`,
     };
   }
 }

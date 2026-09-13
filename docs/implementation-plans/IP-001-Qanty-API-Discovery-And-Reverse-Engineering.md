@@ -7,46 +7,47 @@
 
 ---
 
-## 1. Contexto y Objetivos
+## 1. Context & Objectives
 
-Para que el bot consulte con exactitud los cupos de citas y no opere con parámetros hipotéticos, necesitamos descubrir la estructura real de la API de Qanty directamente desde el portal oficial de dispensación de medicamentos.
+To enable the scheduler to monitor appointment slots with 100% accuracy without relying on synthetic payloads, we must discover the live schema directly from the official Qanty medicine dispensing portal.
 
-### Objetivos Principales:
-1. **Capturar peticiones HTTP reales**: Interceptar todo el tráfico XHR/Fetch de `qanty.com` durante la carga del portal y la navegación de citas.
-2. **Descubrir Parámetros Clave**:
-   - `company_id` / `c`: Confirmar si `Lpds45xBMVIpsXiSxaTy` viaja en headers o body.
-   - `branch_id` (Sedes disponibles para reclamar medicamentos).
-   - `service_id` (Servicios de dispensación).
-   - Estructura exacta del payload de `POST /p/appointments/list_day_schedule`.
-3. **Validar Esquema de Respuesta**: Confirmar cómo viajan los turnos en el JSON (`data`, `items`, `schedules`, formato de fechas y status).
-
----
-
-## 2. Tareas de Implementación (Task Breakdown)
-
-- [ ] **Tarea 1 (Script Sniffer con Playwright)**:
-  - Crear `src/tools/inspectQantyApi.ts` en TypeScript.
-  - Escuchar eventos `page.on('request')` y `page.on('response')`.
-  - Filtrar URLs pertenecientes a `qanty.com`.
-  - Volcar requests y responses completos en `dumps/api/`.
-
-- [ ] **Tarea 2 (Ejecución de Descubrimiento)**:
-  - Añadir script en `package.json`: `"inspect:api": "tsx src/tools/inspectQantyApi.ts"`.
-  - Ejecutar el sniffer navegando a `https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`.
-  - Permitir modo con ventana visible (`headless: false`) para interactuar con la página si solicita seleccionar sede.
-
-- [ ] **Tarea 3 (Análisis y Extracción de Esquema)**:
-  - Analizar los volcados JSON capturados en `dumps/api/`.
-  - Consolidar en un informe `dumps/api/discovered_schema.json` con los headers y payloads reales.
-
-- [ ] **Tarea 4 (Actualización del Cliente HTTP)**:
-  - Actualizar `src/poller/qantyClient.ts` con el payload exacto descubierto.
-  - Validar que `npm test` pase al 100%.
+### Core Objectives:
+1. **Intercept Genuine HTTP Traffic**: Record all XHR / Fetch network transactions from `qanty.com` during initial portal load and appointment navigation.
+2. **Discover Key Operational Parameters**:
+   - `company_id` / `c`: Verify transmission of company code `Lpds45xBMVIpsXiSxaTy`.
+   - `branch_id`: Active clinic and dispensary branch IDs.
+   - `service_id`: Medicine dispensing service identifiers.
+   - Request payload structure for `POST /p/appointments/list_day_schedule`.
+3. **Verify Response Schema**: Confirm envelope packaging (`data`, `items`, `schedules`, date formats, and status flags).
 
 ---
 
-## 3. Criterios de Aceptación
+## 2. Implementation Tasks (Task Breakdown)
 
-1. El script `npm run inspect:api` captura de forma limpia todas las peticiones XHR a Qanty.
-2. Se genera al menos un volcado válido de las llamadas iniciales (`/p/regular_start` o `/p/appointments/list_day_schedule`).
-3. El cliente `qantyClient.ts` utiliza los parámetros reales obtenidos.
+- [x] **Task 1 (Playwright Network Sniffer)**:
+  - Create `src/tools/inspectQantyApi.ts` in TypeScript.
+  - Listen to `page.on('request')` and `page.on('response')`.
+  - Filter network requests targeting `qanty.com`.
+  - Export full JSON request and response dumps to `dumps/api/`.
+
+- [x] **Task 2 (Discovery Script Wiring)**:
+  - Register script in `package.json`: `"inspect:api": "tsx src/tools/inspectQantyApi.ts"`.
+  - Configure target navigation to `https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`.
+  - Support visible browser window (`headless: false`) for interactive clinic selection.
+
+- [ ] **Task 3 (Live Execution & Schema Extraction)**:
+  - Run `npm run inspect:api`.
+  - Inspect JSON dumps captured in `dumps/api/`.
+  - Consolidate discovered schema in `dumps/api/discovered_schema.json`.
+
+- [ ] **Task 4 (HTTP Client Parameter Alignment)**:
+  - Update `src/poller/qantyClient.ts` with genuine parameter names and discovered IDs.
+  - Verify that `npm test` passes with 100% coverage.
+
+---
+
+## 3. Acceptance Criteria
+
+1. Running `npm run inspect:api` cleanly intercepts and outputs all XHR requests to Qanty.
+2. Generates at least one valid dump of the portal initialization calls (`/p/regular_start` or `/p/appointments/list_day_schedule`).
+3. The client `qantyClient.ts` leverages discovered parameters for live polling.
