@@ -14,6 +14,13 @@ const EnvSchema = z.object({
   BROWSER_TIMEOUT_MS: z.coerce.number().default(30000),
   TARGET_START_DATE: z.string().optional(),
   TARGET_END_DATE: z.string().optional(),
+  TARGET_BRANCH_ID: z.string().default('6035'),
+  TARGET_BRANCH_NAME: z.string().default('Medellin'),
+  TARGET_BRANCH_IDS: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(',').map((s) => s.trim()) : ['6035'])),
 });
 
 export const env = EnvSchema.parse(process.env);
+
