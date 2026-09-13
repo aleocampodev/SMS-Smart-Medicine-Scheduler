@@ -1,5 +1,5 @@
 import { env } from './config/env.js';
-import { loadProfiles } from './config/profiles.js';
+import { loadProfiles, maskDocument } from './config/profiles.js';
 import { QantyClient } from './poller/qantyClient.js';
 import { RulesEngine } from './poller/rulesEngine.js';
 import { AdaptiveScheduler } from './poller/adaptiveScheduler.js';
@@ -12,7 +12,7 @@ async function main() {
 
   const profiles = loadProfiles();
   console.log(`[Config] Loaded profiles: ${profiles.length}`);
-  profiles.forEach((p) => console.log(`  - ${p.displayName} (${p.documentType} ${p.documentNumber})`));
+  profiles.forEach((p) => console.log(`  - ${p.displayName} (${p.documentType} ${maskDocument(p.documentNumber)})`));
 
   const qantyClient = new QantyClient();
   const rulesEngine = new RulesEngine();

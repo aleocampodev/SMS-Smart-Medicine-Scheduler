@@ -2,6 +2,7 @@ import { chromium, BrowserContext } from 'playwright';
 import { env } from '../config/env.js';
 
 export interface QantySession {
+  sessionId?: string;
   cookieString: string;
   authorizationToken?: string;
   companyId: string;
@@ -40,6 +41,14 @@ export class SessionHarvester {
     }
 
     return this.refreshSession();
+  }
+
+  /**
+   * Returns the current session ID string required by Qanty API payloads
+   */
+  public async getSessionId(): Promise<string | undefined> {
+    const session = await this.getSession();
+    return session.sessionId;
   }
 
   /**
@@ -109,13 +118,24 @@ export class SessionHarvester {
 
       const page = await context.newPage();
       let capturedAuthToken: string | undefined;
+      let capturedSessionId: string | undefined;
 
-
-      // Listen for authenticated network exchanges
+      // Listen for authenticated network exchanges and session token response
       page.on('request', (req: any) => {
         const headers = req.headers();
         if (headers['authorization']) {
           capturedAuthToken = headers['authorization'].replace(/^Bearer\s+/i, '');
+        }
+      });
+
+      page.on('response', async (res: any) => {
+        if (res.url().includes('regular_start')) {
+          try {
+            const data = await res.json();
+            if (data && data.id) {
+              capturedSessionId = data.id;
+            }
+          } catch {}
         }
       });
 
@@ -124,17 +144,20 @@ export class SessionHarvester {
         timeout: env.BROWSER_TIMEOUT_MS,
       });
 
-      // Allow scripts and initial handshake to settle
-      await page.waitForTimeout(3000);
+      // Allow scripts, reCAPTCHA v3, and initial handshake to settle
+      for (let i = 0; i < 10; i++) {
+        if (capturedSessionId) break;
+        await page.waitForTimeout(500);
+      }
 
       const rawCookies = await context.cookies();
       const cookieString = rawCookies
         .map((c: any) => `${c.name}=${c.value}`)
         .join('; ');
 
-
       const now = Date.now();
       this.currentSession = {
+        sessionId: capturedSessionId,
         cookieString,
         authorizationToken: capturedAuthToken,
         companyId: env.QANTY_COMPANY_CODE,
@@ -143,7 +166,7 @@ export class SessionHarvester {
       };
 
       console.log(
-        `[SessionHarvester] ✅ Session harvested successfully. (${rawCookies.length} cookies, valid for 90m)`
+        `[SessionHarvester] ✅ Session harvested successfully. (${rawCookies.length} cookies, sessionId: ${capturedSessionId ? 'present' : 'pending'}, valid for 90m)`
       );
       return this.currentSession;
     } catch (error: any) {

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { env } from '../config/env.js';
-import { QantyClient } from '../poller/qantyClient.js';
+import { QantyClient, BRANCH_FIRESTORE_MAP } from '../poller/qantyClient.js';
 import { RulesEngine } from '../poller/rulesEngine.js';
 
 console.log('===========================================================');
@@ -84,11 +84,65 @@ function testRulesEngineBranchContext() {
   console.log('✅ Passed: RulesEngine isolates and tags branch context correctly.\n');
 }
 
+function testBranch118FirestoreMappingAndWaitingSlots() {
+  console.log('Test 4: Branch 118 Firestore mapping & WAITING status processing');
+  
+  // 1. Verify Firestore ID mapping
+  assert.ok(BRANCH_FIRESTORE_MAP['118'], 'Branch 118 mapping must exist');
+  assert.strictEqual(
+    BRANCH_FIRESTORE_MAP['118'].branchId,
+    'P44gWuLwrWvKAMd7YrHF',
+    'Branch 118 must map to Firestore ID P44gWuLwrWvKAMd7YrHF'
+  );
+  assert.strictEqual(
+    BRANCH_FIRESTORE_MAP['118'].lineId,
+    'G26hsHGJQWHLWsSUghdK',
+    'Branch 118 line must map to G26hsHGJQWHLWsSUghdK (Agendamiento Nueva EPS)'
+  );
+
+  // 2. Verify RulesEngine accepts Qanty WAITING status
+  const engine = new RulesEngine();
+  const qantyLiveMockSlots = [
+    {
+      name: '2026-09-20 08:00:00',
+      duration: 900,
+      status: 'WAITING',
+      appointment_slot_idx: 0,
+      date: '2026-09-20',
+      time: '08:00:00',
+    },
+    {
+      name: '2026-09-20 08:00:00',
+      duration: 900,
+      status: 'WAITING',
+      appointment_slot_idx: 1,
+      date: '2026-09-20',
+      time: '08:00:00',
+    },
+    {
+      name: '2026-09-20 08:15:00',
+      duration: 900,
+      status: 'WAITING',
+      appointment_slot_idx: 0,
+      date: '2026-09-20',
+      time: '08:15:00',
+    },
+  ];
+
+  const evalResult = engine.evaluate(qantyLiveMockSlots, { branchId: '118' });
+  assert.strictEqual(evalResult.hasAvailability, true, 'WAITING status must pass Rule 2');
+  assert.strictEqual(evalResult.matchingSlots.length, 3, 'Must match all 3 future WAITING slots');
+  assert.strictEqual(evalResult.matchingSlots[0]?.status, 'waiting');
+
+  console.log('✅ Passed: Branch 118 Firestore mapping and WAITING slots verified.\n');
+}
+
 async function run() {
   try {
     testBranchConfigurationDefaults();
     await testQantyClientBranchIntegration();
     testRulesEngineBranchContext();
+    testBranch118FirestoreMappingAndWaitingSlots();
     console.log('🎉 ALL BRANCH TESTS PASSED SUCCESSFULLY!');
   } catch (error: any) {
     console.error('❌ Test failed:', error.message);
