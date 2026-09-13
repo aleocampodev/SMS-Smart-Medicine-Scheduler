@@ -1,0 +1,28 @@
+[
+  {
+    "id": "persona_1",
+    "displayName": "Alex (Principal)",
+    "documentType": "CC",
+    "documentNumber": "1234567890",
+    "firstName": "Alex",
+    "lastName": "Gómez",
+    "birthDate": "1995-04-20",
+    "phone": "3001234567",
+    "email": "alex@example.com",
+    "healthEntity": "Sura",
+    "prescriptionCode": ""
+  },
+  {
+    "id": "persona_2",
+    "displayName": "Familiar 1",
+    "documentType": "CC",
+    "documentNumber": "9876543210",
+    "firstName": "María",
+    "lastName": "Pérez",
+    "birthDate": "1970-08-15",
+    "phone": "3109876543",
+    "email": "maria@example.com",
+    "healthEntity": "Sanitas",
+    "prescriptionCode": ""
+  }
+]
