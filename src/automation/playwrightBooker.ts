@@ -55,6 +55,7 @@ export class PlaywrightBooker {
       browser = await chromium.launch({
         headless: env.PLAYWRIGHT_HEADLESS,
         timeout: env.BROWSER_TIMEOUT_MS,
+        args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
       });
 
       context = await browser.newContext({
@@ -88,8 +89,8 @@ export class PlaywrightBooker {
 
       const page: Page = await context.newPage();
 
-      // En caso de que Qanty tenga una URL específica de reserva
-      const bookingUrl = slot.raw?.booking_url || 'https://qanty.com/';
+      // URL del portal de dispensación de medicamentos Qanty
+      const bookingUrl = slot.raw?.booking_url || env.QANTY_PORTAL_URL;
       console.log(`[PlaywrightBooker] Navegando a ${bookingUrl}...`);
       const navStart = Date.now();
       await page.goto(bookingUrl, { waitUntil: 'domcontentloaded', timeout: env.BROWSER_TIMEOUT_MS });
