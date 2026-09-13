@@ -26,61 +26,11 @@ Securing medicine pickup appointments at healthcare dispensaries and pharmacy ne
 ## 📐 High-Level Architecture
 
 ```mermaid
-flowchart TD
-    subgraph External["🌐 External Services"]
-        QAPI["Qanty Endpoint\nPOST /p/appointments/list_day_schedule"]
-        TGCloud["Telegram Bot API\n(Alerts & Callbacks)"]
-        UserPhone["📱 User Phone\n(Telegram Client)"]
-    end
-
-    subgraph Guardrails["🛡️ OpenSpec Guardrails Layer"]
-        G_NET["G-NET: Anti-Ban & Circuit Breaker\n(Min 30s + Jitter ±15s + Cooldown)"]
-        G_SEC["G-SEC: PII Anonymization & Data Masking\n(Masked IDs, strict .gitignore)"]
-        G_ACT["G-ACT: Concurrency Mutex & Fail-Safe\n(Single runner lock + Human-in-the-loop)"]
-        G_BIZ["G-BIZ: 3-Rules Integrity & State Store\n(Zero false alerts, anti-spam)"]
-    end
-
-    subgraph CoreEngine["⚙️ SMS Core Engine"]
-        direction TB
-
-        subgraph Ingestion["1. Ingestion & Detection"]
-            Poller["Qanty HTTP Client\n(Browser Headers & Jitter)"]
-            Rules["Rules Engine\n1. items > 2\n2. status == 'free'\n3. date != today"]
-            State[("State Store\n(Deduplication Cache)")]
-        end
-
-        subgraph Hub["2. Notification Hub"]
-            BotService["Telegram Service (grammY)\nDynamic Inline Keyboard"]
-        end
-
-        subgraph Automation["3. Fast Booking Engine"]
-            Profiles[("profiles.json\n(Protected Local Storage)")]
-            Booker["Playwright Automator\n- Resource Routing (Block heavy assets)\n- Form Ingestion\n- Screenshot & Trace Evidence"]
-        end
-    end
-
-    %% Data and control flows
-    G_NET -. Controls .-> Poller
-    Poller <== "1. Periodic Check" ==> QAPI
-    Poller --> Rules
-    Rules --> G_BIZ
-    G_BIZ --> State
-    State -- "2. New Available Slot" --> BotService
-
-    BotService --> G_SEC
-    G_SEC -- "3. Dispatch Alert" --> TGCloud
-    TGCloud <== "Push Notification" ==> UserPhone
-
-    UserPhone -- "4. Tap [👤 Book John]" --> TGCloud
-    TGCloud -- "5. Callback Action" --> BotService
-
-    BotService -- "6. Trigger Booking" --> Booker
-    Booker --> G_ACT
-    Profiles -. Load Data .-> Booker
-
-    Booker <== "7. Form Automation" ==> QAPI
-    Booker -- "8. Screenshot Receipt" --> BotService
-    BotService -- "9. Deliver Receipt" --> TGCloud
+flowchart LR
+    A["1. Availability Script\n(POST qanty.com API)"] --> B{"2. API Validator\n- More than 2 items\n- status == 'free'\n- date != today"}
+    B -- "Match found" --> C["3. Telegram Bot\nInteractive Alert:\n[👤 Book Alex] [👤 Book Maria]"]
+    C -- "User taps profile" --> D["4. Playwright Automator\n(Injects personal data)"]
+    D --> E["5. Confirmation Receipt\n(Screenshot to Telegram)"]
 ```
 
 ---
