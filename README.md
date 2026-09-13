@@ -49,9 +49,10 @@ flowchart LR
   - **Resource Routing**: Aborts heavy third-party tracking scripts (Google Analytics, Hotjar, Facebook Pixel) and unneeded fonts, speeding up form completion by up to **60%**.
   - **Diagnostic Tracing on Failure**: Records DevTools traces (`traces/trace_*.zip`) only when an error occurs, keeping disk usage minimal while enabling deep forensic inspection.
   - **Latency Budgets**: Emits exact micro-benchmarks for page load and form submission duration.
-- 🔒 **Security & OpenSpec Guardrails**:
+- 🔒 **Security & SMS Project Guardrails**:
   - Real document numbers and names are completely excluded from Git via `.gitignore`.
-  - PII masking (`******7890`) across all logs and public Telegram commands (`/perfiles`).
+  - PII masking (`******7890`) across all logs and public Telegram commands (`/profiles`).
+
   - Strict concurrency mutex: only 1 browser instance runs at any given time, preventing session collisions.
   - Circuit Breaker: Automatically halts polling for 10 minutes if HTTP `429 (Too Many Requests)` or `403 (Forbidden)` is encountered.
 
