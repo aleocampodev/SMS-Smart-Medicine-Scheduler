@@ -6,20 +6,29 @@ import { BookingResult, Profile, QantySlot } from '../types/index.js';
 
 export class PlaywrightBooker {
   private screenshotsDir: string;
+  private tracesDir: string;
   // Guardrail G-ACT-02: Mutex de concurrencia para evitar sesiones paralelas
   private isBookingInProgress: boolean = false;
 
   constructor() {
     this.screenshotsDir = path.resolve(process.cwd(), 'screenshots');
+    this.tracesDir = path.resolve(process.cwd(), 'traces');
+    
     if (!fs.existsSync(this.screenshotsDir)) {
       fs.mkdirSync(this.screenshotsDir, { recursive: true });
+    }
+    if (!fs.existsSync(this.tracesDir)) {
+      fs.mkdirSync(this.tracesDir, { recursive: true });
     }
   }
 
   /**
    * Ejecuta el flujo de llenado de formulario y reserva para un usuario específico
+   * aplicando directrices de rendimiento de Addy Osmani (resource routing + tracing)
    */
   public async bookAppointment(slot: QantySlot, profile: Profile): Promise<BookingResult> {
+    const startTime = Date.now();
+
     // Verificar si ya hay una reserva en ejecución
     if (this.isBookingInProgress) {
       console.warn(`[PlaywrightBooker:Lock] Reserva rechazada: ya hay un proceso en ejecución.`);
@@ -33,12 +42,14 @@ export class PlaywrightBooker {
     }
 
     this.isBookingInProgress = true;
-    console.log(`[PlaywrightBooker] Iniciando reserva para ${profile.displayName} en fecha ${slot.date} ${slot.time || ''}`);
+    console.log(`[PlaywrightBooker] 🚀 Iniciando reserva para ${profile.displayName} en fecha ${slot.date} ${slot.time || ''}`);
     
     let browser: Browser | null = null;
+    let context: any = null;
     const timestamp = Date.now();
     const screenshotName = `booking_${profile.id}_${slot.date}_${timestamp}.png`;
     const screenshotPath = path.join(this.screenshotsDir, screenshotName);
+    const tracePath = path.join(this.tracesDir, `trace_${profile.id}_${timestamp}.zip`);
 
     try {
       browser = await chromium.launch({
@@ -46,10 +57,33 @@ export class PlaywrightBooker {
         timeout: env.BROWSER_TIMEOUT_MS,
       });
 
-      const context = await browser.newContext({
+      context = await browser.newContext({
         viewport: { width: 1280, height: 720 },
         userAgent:
           'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+      });
+
+      // Addy Osmani Pattern 1: Playwright Tracing forense para capturar snapshots en fallos
+      await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+
+      // Addy Osmani Pattern 2: Resource routing para acelerar navegación y reducir consumo de memoria/red
+      await context.route('**/*', (route: any) => {
+        const req = route.request();
+        const resourceType = req.resourceType();
+        const url = req.url();
+
+        // Bloquear trackers de analítica y recursos pesados innecesarios para agendamiento
+        if (
+          resourceType === 'media' ||
+          resourceType === 'font' ||
+          url.includes('google-analytics') ||
+          url.includes('hotjar') ||
+          url.includes('facebook') ||
+          url.includes('doubleclick')
+        ) {
+          return route.abort();
+        }
+        return route.continue();
       });
 
       const page: Page = await context.newPage();
@@ -57,7 +91,10 @@ export class PlaywrightBooker {
       // En caso de que Qanty tenga una URL específica de reserva
       const bookingUrl = slot.raw?.booking_url || 'https://qanty.com/';
       console.log(`[PlaywrightBooker] Navegando a ${bookingUrl}...`);
+      const navStart = Date.now();
       await page.goto(bookingUrl, { waitUntil: 'domcontentloaded', timeout: env.BROWSER_TIMEOUT_MS });
+      const navDuration = Date.now() - navStart;
+      console.log(`[PlaywrightBooker:Perf] ⚡ Tiempo de carga inicial: ${navDuration}ms`);
 
       // Guardrail G-ACT-04: Detección de CAPTCHA o Cloudflare challenge
       const hasCaptcha = await page.evaluate(() => {
@@ -95,18 +132,35 @@ export class PlaywrightBooker {
       await page.waitForTimeout(1000);
       await page.screenshot({ path: screenshotPath, fullPage: true });
 
-      console.log(`[PlaywrightBooker] Formulario procesado. Captura guardada en: ${screenshotPath}`);
+      // Addy Osmani Pattern 3: Descartar traza si fue exitoso para ahorrar disco
+      if (context) {
+        await context.tracing.stop();
+      }
+
+      const totalDuration = Date.now() - startTime;
+      console.log(`[PlaywrightBooker:Perf] 🏁 Reserva procesada exitosamente en ${totalDuration}ms. Captura guardada en: ${screenshotPath}`);
 
       return {
         success: true,
         profileId: profile.id,
         slotDate: slot.date,
         slotTime: slot.time,
-        message: `Formulario completado exitosamente para ${profile.displayName}.`,
+        message: `Formulario completado exitosamente para ${profile.displayName} en ${totalDuration}ms.`,
         screenshotPath,
       };
     } catch (error: any) {
       console.error(`[PlaywrightBooker] Error durante la reserva:`, error.message);
+      
+      // Guardar traza Playwright únicamente en caso de error para diagnóstico forense
+      if (context) {
+        try {
+          await context.tracing.stop({ path: tracePath });
+          console.log(`[PlaywrightBooker:Forensics] 🔍 Traza guardada para inspección en: ${tracePath}`);
+        } catch {
+          // Ignorar fallo al guardar traza
+        }
+      }
+
       return {
         success: false,
         profileId: profile.id,

@@ -3,5 +3,6 @@ dist/
 .env
 profiles.json
 screenshots/
+traces/
 logs/
 .DS_Store
