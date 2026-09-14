@@ -145,9 +145,25 @@ export class SessionHarvester {
       });
 
       // Allow scripts, reCAPTCHA v3, and initial handshake to settle
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 25; i++) {
         if (capturedSessionId) break;
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(400);
+      }
+
+      if (!capturedSessionId) {
+        try {
+          capturedSessionId = await page.evaluate(() => {
+            return (
+              (window as any).sessionId ||
+              (window as any).__session ||
+              sessionStorage.getItem('session') ||
+              sessionStorage.getItem('sessionId') ||
+              localStorage.getItem('session') ||
+              localStorage.getItem('sessionId') ||
+              undefined
+            );
+          });
+        } catch {}
       }
 
       const rawCookies = await context.cookies();
