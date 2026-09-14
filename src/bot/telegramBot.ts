@@ -38,10 +38,92 @@ export class TelegramBotService {
         '📍 *Monitored Dispensaries:*\n' +
         '• *Sede 118:* Promedan CR 49 #44 99 Local 118\n' +
         '• *Sede 6035:* Nueva EPS CR 46 #47 66 Local 6035\n\n' +
-        'I am actively monitoring appointment openings. The instant a slot becomes available, I will send you an alert with 1-click booking buttons right here.\n\n' +
-        'Type `/profiles` to view configured patients.',
+        '⚡ *Available Commands:*\n' +
+        '• `/check` — Query live dispensary availability right now\n' +
+        '• `/test` — Dispatch an interactive test booking alert\n' +
+        '• `/profiles` — View configured patient profiles\n\n' +
+        'I am actively monitoring appointment openings. Sending a test alert with booking buttons below:',
         { parse_mode: 'Markdown' }
       );
+
+      // Immediately send a test alert so the user can verify buttons
+      const profiles = loadProfiles();
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      await this.sendAvailabilityAlert(
+        {
+          id: `test_118_${tomorrowStr}_0800`,
+          date: tomorrowStr,
+          time: '08:00:00',
+          status: 'waiting',
+          branch: 'MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118',
+          specialty: 'Agendamiento Nueva EPS (Dispensación)',
+        },
+        profiles
+      );
+    });
+
+    // Command /test: dispatch immediate interactive alert
+    this.bot.command('test', async (ctx) => {
+      this.subscribedChatIds.add(ctx.chat.id);
+      const profiles = loadProfiles();
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      await ctx.reply('🧪 *Generating interactive test booking alert...*', { parse_mode: 'Markdown' });
+      await this.sendAvailabilityAlert(
+        {
+          id: `test_118_${tomorrowStr}_0900`,
+          date: tomorrowStr,
+          time: '09:00:00',
+          status: 'waiting',
+          branch: 'MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118',
+          specialty: 'Agendamiento Nueva EPS (Dispensación)',
+        },
+        profiles
+      );
+    });
+
+    // Command /check: query live Qanty availability for Branch 118
+    this.bot.command('check', async (ctx) => {
+      this.subscribedChatIds.add(ctx.chat.id);
+      await ctx.reply('🔍 *Connecting to Qanty and checking live availability for Branch 118...*', {
+        parse_mode: 'Markdown',
+      });
+
+      try {
+        const { QantyClient } = await import('../poller/qantyClient.js');
+        const { RulesEngine } = await import('../poller/rulesEngine.js');
+        const client = new QantyClient();
+        const rules = new RulesEngine();
+
+        const slots = await client.fetchDaySchedule({ branchId: '118' });
+        const evaluation = rules.evaluate(slots, { branchId: '118' });
+
+        if (evaluation.hasAvailability) {
+          await ctx.reply(
+            `✅ *Live Availability Detected!*\n\n` +
+            `🏢 *Branch 118:* Found *${evaluation.matchingSlots.length}* available appointments for upcoming dates.\n` +
+            `Showing earliest available slot below:`,
+            { parse_mode: 'Markdown' }
+          );
+          const earliestSlot = evaluation.matchingSlots[0];
+          await this.sendAvailabilityAlert(earliestSlot, loadProfiles());
+        } else {
+          await ctx.reply(
+            `ℹ️ *Schedule Query Completed*\n\n` +
+            `🏢 *Branch 118:* Currently no open slots found satisfying the 3 business rules.\n` +
+            `*Reasons:* ${evaluation.reasons.join(', ')}\n\n` +
+            `I will continue monitoring in the background and alert you the second a release occurs!`,
+            { parse_mode: 'Markdown' }
+          );
+        }
+      } catch (err: any) {
+        await ctx.reply(`⚠️ *Error checking schedule:* ${err.message}`, { parse_mode: 'Markdown' });
+      }
     });
 
     // Command /profiles (with PII masking G-SEC-02)
