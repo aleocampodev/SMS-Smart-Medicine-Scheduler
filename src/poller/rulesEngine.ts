@@ -46,12 +46,13 @@ export class RulesEngine {
       const branchPrefix = context?.branchId ? `${context.branchId}_` : '';
       const slotId = item.id || item.slot_id || `${branchPrefix}${slotDate}_${slotTime}`;
 
-      // Rule 2: status is 'free', 'available', 'disponible', or Qanty's 'waiting'
+      // Rule 2: status is 'free', 'available', or 'disponible'
+      // Note: In Qanty, unallocated slots strictly have status 'FREE'.
+      // Statuses 'WAITING', 'RESERVED', 'SERVING', and 'FINISHED' indicate already scheduled patients.
       const isFree =
         status === 'free' ||
         status === 'available' ||
-        status === 'disponible' ||
-        status === 'waiting';
+        status === 'disponible';
 
       // Rule 3: date is different from today (future slot)
       const isDifferentDate = Boolean(slotDate && slotDate !== todayStr);

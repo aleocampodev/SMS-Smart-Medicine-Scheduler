@@ -112,13 +112,13 @@ function testBranch118FirestoreMappingAndWaitingSlots() {
     'Branch 6035 line must map to 49P4qDGm7i87QLeyjG25 (Agendamiento)'
   );
 
-  // 2. Verify RulesEngine accepts Qanty WAITING status
+  // 2. Verify RulesEngine accepts Qanty FREE status and rejects WAITING/occupied status
   const engine = new RulesEngine();
   const qantyLiveMockSlots = [
     {
       name: '2026-09-20 08:00:00',
       duration: 900,
-      status: 'WAITING',
+      status: 'FREE',
       appointment_slot_idx: 0,
       date: '2026-09-20',
       time: '08:00:00',
@@ -126,7 +126,7 @@ function testBranch118FirestoreMappingAndWaitingSlots() {
     {
       name: '2026-09-20 08:00:00',
       duration: 900,
-      status: 'WAITING',
+      status: 'FREE',
       appointment_slot_idx: 1,
       date: '2026-09-20',
       time: '08:00:00',
@@ -134,7 +134,7 @@ function testBranch118FirestoreMappingAndWaitingSlots() {
     {
       name: '2026-09-20 08:15:00',
       duration: 900,
-      status: 'WAITING',
+      status: 'FREE',
       appointment_slot_idx: 0,
       date: '2026-09-20',
       time: '08:15:00',
@@ -142,11 +142,20 @@ function testBranch118FirestoreMappingAndWaitingSlots() {
   ];
 
   const evalResult = engine.evaluate(qantyLiveMockSlots, { branchId: '118' });
-  assert.strictEqual(evalResult.hasAvailability, true, 'WAITING status must pass Rule 2');
-  assert.strictEqual(evalResult.matchingSlots.length, 3, 'Must match all 3 future WAITING slots');
-  assert.strictEqual(evalResult.matchingSlots[0]?.status, 'waiting');
+  assert.strictEqual(evalResult.hasAvailability, true, 'FREE status must pass Rule 2');
+  assert.strictEqual(evalResult.matchingSlots.length, 3, 'Must match all 3 future FREE slots');
+  assert.strictEqual(evalResult.matchingSlots[0]?.status, 'free');
 
-  console.log('✅ Passed: Branch 118 Firestore mapping and WAITING slots verified.\n');
+  // Verify WAITING slots are rejected as occupied
+  const occupiedSlots = [
+    { name: '2026-09-20 08:00:00', status: 'WAITING', date: '2026-09-20', time: '08:00:00' },
+    { name: '2026-09-20 08:15:00', status: 'RESERVED', date: '2026-09-20', time: '08:15:00' },
+    { name: '2026-09-20 08:30:00', status: 'SERVING', date: '2026-09-20', time: '08:30:00' },
+  ];
+  const occupiedResult = engine.evaluate(occupiedSlots, { branchId: '118' });
+  assert.strictEqual(occupiedResult.hasAvailability, false, 'Occupied/WAITING statuses must fail Rule 2');
+
+  console.log('✅ Passed: Branch 118 Firestore mapping and FREE/WAITING slot distinction verified.\n');
 }
 
 async function run() {
