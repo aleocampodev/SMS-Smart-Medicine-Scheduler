@@ -42,7 +42,7 @@ export class TelegramBotService {
         '• `/check` — Consultar disponibilidad en vivo en este momento\n' +
         '• `/test` — Enviar una alerta de prueba con botones interactivos\n' +
         '• `/profiles` — Ver personas configuradas para agendamiento\n\n' +
-        'Estoy monitoreando la plataforma Qanty en segundo plano. Te enviaré una alerta inmediata aquí con botones de 1-clic apenas se libere un turno.',
+        'Estoy monitoreando la plataforma Medic Colombia en segundo plano. Te enviaré una alerta inmediata aquí con botones de 1-clic apenas se libere un turno.',
         { parse_mode: 'Markdown' }
       );
 
@@ -97,7 +97,7 @@ export class TelegramBotService {
     this.bot.command('check', async (ctx) => {
       this.subscribedChatIds.add(ctx.chat.id);
       await ctx.reply(
-        '🔍 *Consultando disponibilidad en vivo en Qanty para las Sedes 6035 y 118...*\nPor favor espera unos segundos mientras verificamos.',
+        '🔍 *Consultando disponibilidad en vivo en Medic Colombia para las Sedes 6035 y 118...*\nPor favor espera unos segundos mientras verificamos.',
         { parse_mode: 'Markdown' }
       );
 
@@ -179,7 +179,7 @@ export class TelegramBotService {
 
         await ctx.answerCallbackQuery({ text: `Iniciando agendamiento para ${profile.displayName}...` });
         await ctx.reply(
-          `🚀 *Iniciando agendamiento automático para ${profile.displayName}...*\nPor favor espera mientras el sistema diligencia el formulario en Qanty.`,
+          `🚀 *Iniciando agendamiento automático para ${profile.displayName}...*\nPor favor espera mientras el sistema diligencia el formulario en Medic Colombia.`,
           { parse_mode: 'Markdown' }
         );
 
