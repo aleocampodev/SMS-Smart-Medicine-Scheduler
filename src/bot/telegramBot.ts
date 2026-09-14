@@ -33,33 +33,36 @@ export class TelegramBotService {
       this.subscribedChatIds.add(ctx.chat.id);
       console.log(`[TelegramBot] /start received from chat ID: ${ctx.chat.id}. Added to active recipients.`);
       await ctx.reply(
-        '👋 *Hello! I am the Smart Medicine Scheduler Bot (SMSBot).*\n\n' +
-        `✅ *Connection active!* Your Chat ID is: \`${ctx.chat.id}\`\n\n` +
-        '📍 *Monitored Dispensaries:*\n' +
-        '• *Sede 118:* Promedan CR 49 #44 99 Local 118\n' +
-        '• *Sede 6035:* Nueva EPS CR 46 #47 66 Local 6035\n\n' +
-        '⚡ *Available Commands:*\n' +
-        '• `/check` — Query live dispensary availability right now\n' +
-        '• `/test` — Dispatch an interactive test booking alert\n' +
-        '• `/profiles` — View configured patient profiles\n\n' +
-        'I am actively monitoring appointment openings. Sending a test alert with booking buttons below:',
+        '👋 *¡Hola! Soy el bot de Smart Medicine Scheduler (SMSBot).*\n\n' +
+        `✅ *¡Conexión activada con éxito!* Tu ID de chat es: \`${ctx.chat.id}\`\n\n` +
+        '📍 *Sedes Monitoreadas:*\n' +
+        '• *Sede 6035:* Nueva EPS CR 46 #47 66 Local 6035 (Av. Oriental)\n' +
+        '• *Sede 118:* Promedan CR 49 #44 99 Local 118\n\n' +
+        '⚡ *Comandos Disponibles:*\n' +
+        '• `/check` — Consultar disponibilidad en vivo en este momento\n' +
+        '• `/test` — Enviar una alerta de prueba con botones interactivos\n' +
+        '• `/profiles` — Ver personas configuradas para agendamiento\n\n' +
+        'Estoy monitoreando la plataforma Qanty en segundo plano. Te enviaré una alerta inmediata aquí con botones de 1-clic apenas se libere un turno.',
         { parse_mode: 'Markdown' }
       );
 
       // Immediately send a test alert so the user can verify buttons
       const profiles = loadProfiles();
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const localNow = new Date();
+      const tomorrow = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate() + 1);
+      const yyyy = tomorrow.getFullYear();
+      const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const dd = String(tomorrow.getDate()).padStart(2, '0');
+      const tomorrowStr = `${yyyy}-${mm}-${dd}`;
 
       await this.sendAvailabilityAlert(
         {
-          id: `test_118_${tomorrowStr}_0800`,
+          id: `test_6035_${tomorrowStr}_0800`,
           date: tomorrowStr,
           time: '08:00:00',
           status: 'waiting',
-          branch: 'MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118',
-          specialty: 'Agendamiento Nueva EPS (Dispensación)',
+          branch: 'MEDELLIN – ANTIOQUIA – NUEVA EPS CR 46 #47 66 LOCAL 6035',
+          specialty: 'Agendamiento (Dispensación de Medicamentos)',
         },
         profiles
       );
@@ -69,60 +72,68 @@ export class TelegramBotService {
     this.bot.command('test', async (ctx) => {
       this.subscribedChatIds.add(ctx.chat.id);
       const profiles = loadProfiles();
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const localNow = new Date();
+      const tomorrow = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate() + 1);
+      const yyyy = tomorrow.getFullYear();
+      const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const dd = String(tomorrow.getDate()).padStart(2, '0');
+      const tomorrowStr = `${yyyy}-${mm}-${dd}`;
 
-      await ctx.reply('🧪 *Generating interactive test booking alert...*', { parse_mode: 'Markdown' });
+      await ctx.reply('🧪 *Generando alerta de prueba con botones interactivos...*', { parse_mode: 'Markdown' });
       await this.sendAvailabilityAlert(
         {
-          id: `test_118_${tomorrowStr}_0900`,
+          id: `test_6035_${tomorrowStr}_0830`,
           date: tomorrowStr,
-          time: '09:00:00',
+          time: '08:30:00',
           status: 'waiting',
-          branch: 'MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118',
-          specialty: 'Agendamiento Nueva EPS (Dispensación)',
+          branch: 'MEDELLIN – ANTIOQUIA – NUEVA EPS CR 46 #47 66 LOCAL 6035',
+          specialty: 'Agendamiento (Dispensación de Medicamentos)',
         },
         profiles
       );
     });
 
-    // Command /check: query live Qanty availability for Branch 118
+    // Command /check: query live Qanty availability for both branches
     this.bot.command('check', async (ctx) => {
       this.subscribedChatIds.add(ctx.chat.id);
-      await ctx.reply('🔍 *Connecting to Qanty and checking live availability for Branch 118...*', {
-        parse_mode: 'Markdown',
-      });
+      await ctx.reply(
+        '🔍 *Consultando disponibilidad en vivo en Qanty para las Sedes 6035 y 118...*\nPor favor espera unos segundos mientras verificamos.',
+        { parse_mode: 'Markdown' }
+      );
 
       try {
         const { QantyClient } = await import('../poller/qantyClient.js');
         const { RulesEngine } = await import('../poller/rulesEngine.js');
         const client = new QantyClient();
         const rules = new RulesEngine();
+        const profiles = loadProfiles();
 
-        const slots = await client.fetchDaySchedule({ branchId: '118' });
-        const evaluation = rules.evaluate(slots, { branchId: '118' });
+        let totalFound = 0;
+        for (const branchId of env.TARGET_BRANCH_IDS) {
+          const slots = await client.fetchDaySchedule({ branchId });
+          const evaluation = rules.evaluate(slots, { branchId });
 
-        if (evaluation.hasAvailability) {
+          if (evaluation.hasAvailability && evaluation.matchingSlots.length > 0) {
+            totalFound += evaluation.matchingSlots.length;
+            const earliestSlot = evaluation.matchingSlots[0];
+            await ctx.reply(
+              `✅ *¡Disponibilidad en Sede ${branchId}!* Se encontraron *${evaluation.matchingSlots.length}* turnos libres para mañana.\nMostrando la franja más próxima a continuación:`,
+              { parse_mode: 'Markdown' }
+            );
+            await this.sendAvailabilityAlert(earliestSlot, profiles);
+          }
+        }
+
+        if (totalFound === 0) {
           await ctx.reply(
-            `✅ *Live Availability Detected!*\n\n` +
-            `🏢 *Branch 118:* Found *${evaluation.matchingSlots.length}* available appointments for upcoming dates.\n` +
-            `Showing earliest available slot below:`,
-            { parse_mode: 'Markdown' }
-          );
-          const earliestSlot = evaluation.matchingSlots[0];
-          await this.sendAvailabilityAlert(earliestSlot, loadProfiles());
-        } else {
-          await ctx.reply(
-            `ℹ️ *Schedule Query Completed*\n\n` +
-            `🏢 *Branch 118:* Currently no open slots found satisfying the 3 business rules.\n` +
-            `*Reasons:* ${evaluation.reasons.join(', ')}\n\n` +
-            `I will continue monitoring in the background and alert you the second a release occurs!`,
+            'ℹ️ *Consulta Finalizada*\n\n' +
+            'No se detectaron turnos disponibles en este momento que cumplan las reglas de negocio.\n' +
+            '¡El monitor sigue activo en segundo plano y te alertará automáticamente apenas se libere un turno!',
             { parse_mode: 'Markdown' }
           );
         }
       } catch (err: any) {
-        await ctx.reply(`⚠️ *Error checking schedule:* ${err.message}`, { parse_mode: 'Markdown' });
+        await ctx.reply(`⚠️ *Error al consultar la disponibilidad:* ${err.message}`, { parse_mode: 'Markdown' });
       }
     });
 
@@ -130,7 +141,7 @@ export class TelegramBotService {
     this.bot.command('profiles', async (ctx) => {
       const profiles = loadProfiles();
       if (profiles.length === 0) {
-        await ctx.reply('⚠️ No profiles loaded in `profiles.json`.');
+        await ctx.reply('⚠️ No se encontraron perfiles cargados en `profiles.json`.');
         return;
       }
 
@@ -138,7 +149,7 @@ export class TelegramBotService {
         .map((p) => `• *${p.displayName}* (${p.documentType} \`${p.documentNumber.slice(-4).padStart(p.documentNumber.length, '*')}\`)`)
         .join('\n');
 
-      await ctx.reply(`📋 *Available profiles for scheduling:*\n\n${list}`, {
+      await ctx.reply(`📋 *Personas configuradas para agendamiento:*\n\n${list}`, {
         parse_mode: 'Markdown',
       });
     });
@@ -148,8 +159,8 @@ export class TelegramBotService {
       const data = ctx.callbackQuery.data;
 
       if (data.startsWith('dismiss:')) {
-        await ctx.answerCallbackQuery({ text: 'Alert dismissed.' });
-        await ctx.editMessageText('❌ *Alert dismissed by user.*', { parse_mode: 'Markdown' });
+        await ctx.answerCallbackQuery({ text: 'Alerta descartada.' });
+        await ctx.editMessageText('❌ *Alerta descartada por el usuario.*', { parse_mode: 'Markdown' });
         return;
       }
 
@@ -162,18 +173,19 @@ export class TelegramBotService {
         const profile = getProfileById(profileId);
 
         if (!profile) {
-          await ctx.answerCallbackQuery({ text: 'Error: Profile not found.' });
+          await ctx.answerCallbackQuery({ text: 'Error: Perfil no encontrado.' });
           return;
         }
 
-        await ctx.answerCallbackQuery({ text: `Starting booking for ${profile.displayName}...` });
-        await ctx.reply(`🚀 *Launching Playwright automator for ${profile.displayName}...*\nPlease wait while the form is filled.`, {
-          parse_mode: 'Markdown',
-        });
+        await ctx.answerCallbackQuery({ text: `Iniciando agendamiento para ${profile.displayName}...` });
+        await ctx.reply(
+          `🚀 *Iniciando agendamiento automático para ${profile.displayName}...*\nPor favor espera mientras el sistema diligencia el formulario en Qanty.`,
+          { parse_mode: 'Markdown' }
+        );
 
         // Fallback slot if active memory expired
         const effectiveSlot: QantySlot = slot || {
-          date: 'Next available date',
+          date: 'Próxima fecha disponible',
           status: 'free',
         };
 
@@ -182,10 +194,10 @@ export class TelegramBotService {
 
         if (result.success) {
           const successMsg =
-            `✅ *Appointment Booking Completed!*\n\n` +
-            `👤 *Person:* ${profile.displayName}\n` +
-            `📅 *Date:* ${result.slotDate} ${result.slotTime || ''}\n` +
-            `💬 *Result:* ${result.message}`;
+            `✅ *¡Cita Agendada Exitosamente!*\n\n` +
+            `👤 *Paciente:* ${profile.displayName}\n` +
+            `📅 *Fecha:* ${result.slotDate} ${result.slotTime || ''}\n` +
+            `💬 *Resultado:* ${result.message}`;
 
           if (result.screenshotPath && fs.existsSync(result.screenshotPath)) {
             await ctx.replyWithPhoto(new InputFile(result.screenshotPath), {
@@ -197,8 +209,8 @@ export class TelegramBotService {
           }
         } else {
           const errorMsg =
-            `❌ *Booking failed for ${profile.displayName}*\n\n` +
-            `⚠️ Reason: ${result.message}`;
+            `❌ *No se pudo agendar la cita para ${profile.displayName}*\n\n` +
+            `⚠️ Motivo: ${result.message}`;
 
           if (result.screenshotPath && fs.existsSync(result.screenshotPath)) {
             await ctx.replyWithPhoto(new InputFile(result.screenshotPath), {
@@ -241,12 +253,12 @@ export class TelegramBotService {
     this.activeSlots.set(slotKey, slot);
 
     const message =
-      `🚨 *AVAILABLE MEDICINE PICKUP SLOT DETECTED!*\n\n` +
-      `📅 *Date:* \`${slot.date}\`\n` +
-      `⏰ *Time:* \`${slot.time || 'Check portal'}\`\n` +
-      `🏢 *Branch:* ${slot.branch || 'Main Branch'}\n` +
-      `💊 *Service:* ${slot.specialty || 'Medicine Dispensing'}\n\n` +
-      `👇 *Select profile to book immediately:*`;
+      `🚨 *¡TURNO DISPONIBLE DE MEDICAMENTOS DETECTADO!*\n\n` +
+      `📅 *Fecha:* \`${slot.date}\`\n` +
+      `⏰ *Hora:* \`${slot.time || 'Consultar portal'}\`\n` +
+      `🏢 *Sede:* ${slot.branch || 'Sede Principal'}\n` +
+      `💊 *Servicio:* ${slot.specialty || 'Dispensación Nueva EPS'}\n\n` +
+      `👇 *Selecciona la persona a quien agendar con 1-clic:*`;
 
     const keyboard = new InlineKeyboard();
 
@@ -256,7 +268,7 @@ export class TelegramBotService {
     });
 
     if (profiles.length % 2 !== 0) keyboard.row();
-    keyboard.text('❌ Dismiss', `dismiss:${slotKey}`);
+    keyboard.text('❌ Descartar', `dismiss:${slotKey}`);
 
     const recipients: (string | number)[] = [];
     if (env.TELEGRAM_CHAT_ID && env.TELEGRAM_CHAT_ID !== 'mock_chat_id' && env.TELEGRAM_CHAT_ID.trim() !== '') {
