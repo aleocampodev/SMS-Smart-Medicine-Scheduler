@@ -100,6 +100,18 @@ function testBranch118FirestoreMappingAndWaitingSlots() {
     'Branch 118 line must map to G26hsHGJQWHLWsSUghdK (Agendamiento Nueva EPS)'
   );
 
+  assert.ok(BRANCH_FIRESTORE_MAP['6035'], 'Branch 6035 mapping must exist');
+  assert.strictEqual(
+    BRANCH_FIRESTORE_MAP['6035'].branchId,
+    'ZOLH5f1ydz6XQxFvpL0e',
+    'Branch 6035 must map to Firestore ID ZOLH5f1ydz6XQxFvpL0e'
+  );
+  assert.strictEqual(
+    BRANCH_FIRESTORE_MAP['6035'].lineId,
+    '49P4qDGm7i87QLeyjG25',
+    'Branch 6035 line must map to 49P4qDGm7i87QLeyjG25 (Agendamiento)'
+  );
+
   // 2. Verify RulesEngine accepts Qanty WAITING status
   const engine = new RulesEngine();
   const qantyLiveMockSlots = [
