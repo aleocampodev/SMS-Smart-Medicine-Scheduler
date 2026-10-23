@@ -23,6 +23,8 @@ export class SessionHarvester {
   private isHarvesting: boolean = false;
   // TTL for harvested session: 90 minutes
   private readonly SESSION_TTL_MS = 90 * 60 * 1000;
+  // Cooldown after a failed harvest before retrying (avoids browser relaunch spam)
+  private readonly HARVEST_FAILURE_COOLDOWN_MS = 10 * 60 * 1000;
 
   public static getInstance(): SessionHarvester {
     if (!SessionHarvester.instance) {
@@ -119,6 +121,7 @@ export class SessionHarvester {
       const page = await context.newPage();
       let capturedAuthToken: string | undefined;
       let capturedSessionId: string | undefined;
+      let regularStartRejection: string | undefined;
 
       // Listen for authenticated network exchanges and session token response
       page.on('request', (req: any) => {
@@ -134,6 +137,9 @@ export class SessionHarvester {
             const data = await res.json();
             if (data && data.id) {
               capturedSessionId = data.id;
+            } else if (data && data.code) {
+              // Qanty rejected the handshake (e.g. code 'BOT' when reCAPTCHA v3 scoring fails)
+              regularStartRejection = String(data.code);
             }
           } catch {}
         }
@@ -166,6 +172,15 @@ export class SessionHarvester {
         } catch {}
       }
 
+      // A session without an id is unusable: Qanty rejects list_day_schedule with HTTP 400.
+      // Fail loudly instead of caching a broken session.
+      if (!capturedSessionId) {
+        const reason = regularStartRejection
+          ? `Qanty rejected session handshake with code '${regularStartRejection}' (reCAPTCHA verification failed)`
+          : 'no session id was captured from regular_start';
+        throw new Error(`Session harvest failed: ${reason}`);
+      }
+
       const rawCookies = await context.cookies();
       const cookieString = rawCookies
         .map((c: any) => `${c.name}=${c.value}`)
@@ -187,14 +202,16 @@ export class SessionHarvester {
       return this.currentSession;
     } catch (error: any) {
       console.error('[SessionHarvester] Failed to harvest session:', error.message);
-      // Fallback empty session
+      // Cache the failure for a cooldown window so we do not relaunch a browser
+      // every polling cycle and worsen anti-bot scoring (see P-NET-03 intent).
       const now = Date.now();
-      return {
+      this.currentSession = {
         cookieString: '',
         companyId: env.QANTY_COMPANY_CODE,
         createdAt: now,
-        expiresAt: now + 5 * 60 * 1000, // 5 min retry window on error
+        expiresAt: now + this.HARVEST_FAILURE_COOLDOWN_MS, // cooldown before next harvest attempt
       };
+      return this.currentSession;
     } finally {
       if (activeContext) await activeContext.close().catch(() => {});
       if (browser) await browser.close().catch(() => {});

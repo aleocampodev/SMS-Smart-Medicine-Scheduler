@@ -1,5 +1,7 @@
 import { env } from '../config/env.js';
 import { SessionHarvester } from './sessionHarvester.js';
+import { flattenAppointments } from '../../packages/poller/src/parse.js';
+import { BRANCH_MAP, buildDayPayload, resolveBranch, tomorrowLocalDay } from '../../packages/poller/src/payload.js';
 
 export interface QantyFetchOptions {
   branchId?: string | number;
@@ -9,18 +11,9 @@ export interface QantyFetchOptions {
   customPayload?: Record<string, any>;
 }
 
-export const BRANCH_FIRESTORE_MAP: Record<string, { branchId: string; lineId: string; name: string }> = {
-  '118': {
-    branchId: 'P44gWuLwrWvKAMd7YrHF',
-    lineId: 'G26hsHGJQWHLWsSUghdK',
-    name: 'MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118',
-  },
-  '6035': {
-    branchId: 'ZOLH5f1ydz6XQxFvpL0e',
-    lineId: '49P4qDGm7i87QLeyjG25',
-    name: 'MEDELLIN – ANTIOQUIA – NUEVA EPS CR 46 #47 66 LOCAL 6035',
-  },
-};
+// Single source of truth lives in the functional core; re-exported for
+// backward compatibility with existing tools and tests.
+export const BRANCH_FIRESTORE_MAP: Record<string, { branchId: string; lineId: string; name: string }> = BRANCH_MAP;
 
 export class QantyClient {
   private endpoint: string;
@@ -46,40 +39,34 @@ export class QantyClient {
 
     const requestedBranch = String(options.branchId || env.TARGET_BRANCH_ID || '6035');
     const branchMapping = BRANCH_FIRESTORE_MAP[requestedBranch];
-    const isRealQanty = this.endpoint.includes('qanty.com');
-
-    // When querying real Qanty host, translate local branch number (118/6035) to Firestore doc ID
-    const targetBranchId = isRealQanty && branchMapping ? branchMapping.branchId : requestedBranch;
-    const targetLineId = options.serviceId || branchMapping?.lineId || 'G26hsHGJQWHLWsSUghdK';
+    // Functional core: resolve local branch number (118/6035) to Firestore doc ID.
+    const resolved = resolveBranch(requestedBranch, this.endpoint);
 
     const sessionId = await this.sessionHarvester.getSessionId();
 
+    // Guard: querying without a session is a guaranteed HTTP 400 and hammers the API.
+    // Skip the cycle; SessionHarvester applies its own cooldown before reharvesting.
+    if (!sessionId) {
+      console.warn('[QantyClient] No valid Qanty session available (session handshake rejected). Skipping this cycle until a session is harvested.');
+      return [];
+    }
+
     // Compute tomorrow in local calendar time (America/Bogota)
-    const localNow = new Date();
-    const tomorrow = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate() + 1);
-    const yyyy = tomorrow.getFullYear();
-    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const dd = String(tomorrow.getDate()).padStart(2, '0');
-    const defaultDay = `${yyyy}-${mm}-${dd}`;
+    const defaultDay = tomorrowLocalDay();
     const targetDay = options.startDate || env.TARGET_START_DATE || defaultDay;
 
-    const defaultPayload: Record<string, any> = {
-      company_id: env.QANTY_COMPANY_CODE,
-      branch_id: targetBranchId,
-      line_id: targetLineId,
-      service_id: options.serviceId || '1',
-      start_date: targetDay,
-      end_date: options.endDate || env.TARGET_END_DATE,
+    // Functional core: build the Qanty request payload.
+    const defaultPayload = buildDayPayload({
+      companyId: env.QANTY_COMPANY_CODE,
+      branchKey: requestedBranch,
+      endpoint: this.endpoint,
+      lineId: options.serviceId ? undefined : resolved.targetLineId,
+      serviceId: options.serviceId,
       day: targetDay,
-      session: sessionId,
-      origin: 'appointments',
-      ...options.customPayload,
-    };
-
-    // Ensure backwards-compatibility for mock endpoints expecting literal branch_id
-    if (!isRealQanty) {
-      defaultPayload.branch_id = options.branchId || env.TARGET_BRANCH_ID || '6035';
-    }
+      endDate: options.endDate || env.TARGET_END_DATE,
+      sessionId,
+      customPayload: options.customPayload,
+    });
 
     const sessionHeaders = await this.sessionHarvester.getHeaders();
     const headers: Record<string, string> = {
@@ -114,43 +101,8 @@ export class QantyClient {
         return [];
       }
 
-      // 1. Flatten Qanty nested appointments object: { appointments: { [time]: { "0": {...}, "1": {...} } } }
-      if (data && data.appointments && typeof data.appointments === 'object') {
-        const slots: any[] = [];
-        for (const [timeKey, slotDict] of Object.entries(data.appointments)) {
-          if (slotDict && typeof slotDict === 'object') {
-            for (const [idxKey, slot] of Object.entries(slotDict as Record<string, any>)) {
-              slots.push({
-                ...slot,
-                timeKey,
-                slotIndex: idxKey,
-                date: slot.name ? slot.name.split(' ')[0] : timeKey.split('T')[0],
-                time: slot.name ? slot.name.split(' ')[1] : timeKey.split('T')[1]?.slice(0, 5),
-                branch: branchMapping?.name || `Medellin Branch ${requestedBranch}`,
-                branch_id: requestedBranch,
-              });
-            }
-          }
-        }
-        return slots;
-      }
-
-      // Extract array based on standard Qanty envelope packaging
-      if (Array.isArray(data)) {
-        return data;
-      }
-      if (data && Array.isArray(data.items)) {
-        return data.items;
-      }
-      if (data && Array.isArray(data.data)) {
-        return data.data;
-      }
-      if (data && Array.isArray(data.schedules)) {
-        return data.schedules;
-      }
-
-      console.warn(`[QantyClient] Response format is not a direct array or appointments dictionary:`, typeof data);
-      return [];
+      // Functional core: flatten nested appointments dict or unwrap envelope arrays.
+      return flattenAppointments(data, requestedBranch, branchMapping?.name) as any[];
     } catch (error: any) {
       console.error(`[QantyClient] Error connecting to Qanty API:`, error.message);
       return [];

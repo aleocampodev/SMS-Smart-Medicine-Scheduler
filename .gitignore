@@ -6,4 +6,7 @@ screenshots/
 traces/
 dumps/
 logs/
+.playwright-mcp/
+.archify/
+INSTRUCCIONES_BACKUP.md
 .DS_Store

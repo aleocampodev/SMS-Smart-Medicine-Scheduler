@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { env } from '../config/env.js';
 import { QantyClient, BRANCH_FIRESTORE_MAP } from '../poller/qantyClient.js';
+import { SessionHarvester } from '../poller/sessionHarvester.js';
 import { RulesEngine } from '../poller/rulesEngine.js';
 
 console.log('===========================================================');
@@ -22,7 +23,12 @@ function testBranchConfigurationDefaults() {
 async function testQantyClientBranchIntegration() {
   console.log('Test 2: QantyClient uses configured branch ID in payload');
 
-  const client = new QantyClient('https://httpbin.org/post');
+  // Inject a stub harvester so the test stays hermetic (no real browser launch)
+  const stubHarvester = new SessionHarvester();
+  (stubHarvester as any).getSessionId = async () => 'test-session-id';
+  (stubHarvester as any).getHeaders = async () => ({ 'User-Agent': 'test-agent' });
+
+  const client = new QantyClient('https://httpbin.org/post', stubHarvester);
 
   // Override fetch to verify the payload passed to the endpoint
   let capturedPayload: any = null;
@@ -53,6 +59,40 @@ async function testQantyClientBranchIntegration() {
     );
 
     console.log('✅ Passed: QantyClient correctly applies default and custom branch IDs.\n');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+async function testQantyClientSkipsFetchWithoutSession() {
+  console.log('Test 2b: QantyClient skips network call when no session id is available');
+
+  // Stub the harvester to simulate a rejected handshake (reCAPTCHA 'BOT' code),
+  // which leaves the session without an id.
+  const stubHarvester = new SessionHarvester();
+  (stubHarvester as any).getSessionId = async () => undefined;
+  (stubHarvester as any).getHeaders = async () => ({ 'User-Agent': 'test-agent' });
+
+  const clientWithNoSession = new QantyClient(
+    'https://qanty.com/p/appointments/list_day_schedule',
+    stubHarvester
+  );
+
+  let fetchCalled = false;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    return new Response(JSON.stringify({ success: false }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  try {
+    const slots = await clientWithNoSession.fetchDaySchedule({ branchId: '6035' });
+    assert.strictEqual(fetchCalled, false, 'fetch must NOT be called when sessionId is missing');
+    assert.deepStrictEqual(slots, [], 'fetchDaySchedule must return an empty list without a session');
+    console.log('✅ Passed: QantyClient skips the network call without a valid session.\n');
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -162,6 +202,7 @@ async function run() {
   try {
     testBranchConfigurationDefaults();
     await testQantyClientBranchIntegration();
+    await testQantyClientSkipsFetchWithoutSession();
     testRulesEngineBranchContext();
     testBranch118FirestoreMappingAndWaitingSlots();
     console.log('🎉 ALL BRANCH TESTS PASSED SUCCESSFULLY!');
