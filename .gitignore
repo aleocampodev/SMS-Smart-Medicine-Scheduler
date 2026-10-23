@@ -9,4 +9,6 @@ logs/
 .playwright-mcp/
 .archify/
 INSTRUCCIONES_BACKUP.md
+.turbo/
+.next/
 .DS_Store

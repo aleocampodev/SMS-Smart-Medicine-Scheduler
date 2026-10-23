@@ -1,9 +1,9 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const ProfileSchema = z.object({
   id: z.string(),
   displayName: z.string(),
-  documentType: z.enum(['CC', 'TI', 'CE', 'PASAPORTE', 'RC']).default('CC'),
+  documentType: z.enum(["CC", "TI", "CE", "PASAPORTE", "RC"]).default("CC"),
   documentNumber: z.string(),
   firstName: z.string(),
   lastName: z.string(),

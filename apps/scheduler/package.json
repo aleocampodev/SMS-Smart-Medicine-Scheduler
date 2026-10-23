@@ -1,0 +1,37 @@
+{
+  "name": "@SMS/scheduler",
+  "version": "1.0.0",
+  "description": "Autonomous healthcare dispensary availability monitor and sub-second Playwright booker",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "check-types": "tsc --noEmit",
+    "test:rules": "tsx src/tests/testRules.ts",
+    "test:guardrails": "tsx src/tests/testGuardrails.ts",
+    "test:adaptive": "tsx src/tests/testAdaptiveScheduler.ts",
+    "test:branches": "tsx src/tests/testBranches.ts",
+    "test:session": "tsx src/tests/testSessionHarvester.ts",
+    "test:poller": "tsx src/tests/testFunctionalPoller.ts",
+    "test": "npm run test:rules && npm run test:guardrails && npm run test:adaptive && npm run test:branches && npm run test:session && npm run test:poller",
+    "inspect:api": "tsx src/tools/inspectQantyApi.ts",
+    "list:branches": "tsx src/tools/listBranches.ts",
+    "harvest:manual": "tsx src/tools/manualSessionHarvest.ts",
+    "watch:horizon": "tsx src/tools/watchHorizon.ts"
+  },
+  "dependencies": {
+    "@SMS/poller": "workspace:*",
+    "dotenv": "^17.4.2",
+    "grammy": "^1.46.0",
+    "playwright": "^1.63.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@SMS/config": "workspace:*",
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "catalog:"
+  }
+}

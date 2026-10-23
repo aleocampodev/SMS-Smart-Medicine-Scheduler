@@ -4,6 +4,7 @@ Run the Horizon Watcher (`npm run watch:horizon`) 24/7 on an AWS Lightsail
 instance so the laptop can stay off.
 
 > **Caveats**
+>
 > - Free for the first 3 months on eligible plans (requires a credit card at signup).
 > - Datacenter IPs may be penalized by reCAPTCHA v3; the watcher retries the
 >   harvest every 10 minutes until it passes.

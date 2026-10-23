@@ -1,7 +1,12 @@
-import { env } from '../config/env.js';
-import { SessionHarvester } from './sessionHarvester.js';
-import { flattenAppointments } from '../../packages/poller/src/parse.js';
-import { BRANCH_MAP, buildDayPayload, resolveBranch, tomorrowLocalDay } from '../../packages/poller/src/payload.js';
+import { env } from "../config/env.js";
+import { SessionHarvester } from "./sessionHarvester.js";
+import { flattenAppointments } from "../../packages/poller/src/parse.js";
+import {
+  BRANCH_MAP,
+  buildDayPayload,
+  resolveBranch,
+  tomorrowLocalDay,
+} from "../../packages/poller/src/payload.js";
 
 export interface QantyFetchOptions {
   branchId?: string | number;
@@ -13,7 +18,10 @@ export interface QantyFetchOptions {
 
 // Single source of truth lives in the functional core; re-exported for
 // backward compatibility with existing tools and tests.
-export const BRANCH_FIRESTORE_MAP: Record<string, { branchId: string; lineId: string; name: string }> = BRANCH_MAP;
+export const BRANCH_FIRESTORE_MAP: Record<
+  string,
+  { branchId: string; lineId: string; name: string }
+> = BRANCH_MAP;
 
 export class QantyClient {
   private endpoint: string;
@@ -33,11 +41,13 @@ export class QantyClient {
     const now = Date.now();
     if (now < this.circuitBreakerUntil) {
       const waitSeconds = Math.ceil((this.circuitBreakerUntil - now) / 1000);
-      console.warn(`[QantyClient:CircuitBreaker] Polling paused defensively for ${waitSeconds}s following prior rate limit.`);
+      console.warn(
+        `[QantyClient:CircuitBreaker] Polling paused defensively for ${waitSeconds}s following prior rate limit.`,
+      );
       return [];
     }
 
-    const requestedBranch = String(options.branchId || env.TARGET_BRANCH_ID || '6035');
+    const requestedBranch = String(options.branchId || env.TARGET_BRANCH_ID || "6035");
     const branchMapping = BRANCH_FIRESTORE_MAP[requestedBranch];
     // Functional core: resolve local branch number (118/6035) to Firestore doc ID.
     const resolved = resolveBranch(requestedBranch, this.endpoint);
@@ -47,7 +57,9 @@ export class QantyClient {
     // Guard: querying without a session is a guaranteed HTTP 400 and hammers the API.
     // Skip the cycle; SessionHarvester applies its own cooldown before reharvesting.
     if (!sessionId) {
-      console.warn('[QantyClient] No valid Qanty session available (session handshake rejected). Skipping this cycle until a session is harvested.');
+      console.warn(
+        "[QantyClient] No valid Qanty session available (session handshake rejected). Skipping this cycle until a session is harvested.",
+      );
       return [];
     }
 
@@ -71,14 +83,14 @@ export class QantyClient {
     const sessionHeaders = await this.sessionHarvester.getHeaders();
     const headers: Record<string, string> = {
       ...sessionHeaders,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/plain, */*',
+      "Content-Type": "application/json",
+      Accept: "application/json, text/plain, */*",
     };
 
     try {
       console.log(`[QantyClient] Querying POST ${this.endpoint}...`);
       const response = await fetch(this.endpoint, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify(defaultPayload),
       });
@@ -87,7 +99,9 @@ export class QantyClient {
         console.warn(`[QantyClient] HTTP error ${response.status}: ${response.statusText}`);
         // Guardrail P-NET-03: 10-minute cooldown (600,000 ms) upon 429 / 403 response
         if (response.status === 429 || response.status === 403) {
-          console.error(`[QantyClient:CircuitBreaker] Activated after HTTP ${response.status}. Pausing polling for 10 minutes.`);
+          console.error(
+            `[QantyClient:CircuitBreaker] Activated after HTTP ${response.status}. Pausing polling for 10 minutes.`,
+          );
           this.circuitBreakerUntil = Date.now() + 10 * 60 * 1000;
         }
         return [];
@@ -95,8 +109,10 @@ export class QantyClient {
 
       const data = (await response.json()) as any;
 
-      if (data && data.code === 'INVALID_SESSION') {
-        console.warn(`[QantyClient] Qanty returned INVALID_SESSION. Invalidating session cache for refresh...`);
+      if (data && data.code === "INVALID_SESSION") {
+        console.warn(
+          `[QantyClient] Qanty returned INVALID_SESSION. Invalidating session cache for refresh...`,
+        );
         this.sessionHarvester.invalidateSession();
         return [];
       }
@@ -113,32 +129,32 @@ export class QantyClient {
    * Queries POST /p/get_branches to retrieve all branches for the company
    */
   public async fetchBranches(sessionCookie?: string): Promise<any[]> {
-    const url = 'https://qanty.com/p/get_branches';
+    const url = "https://qanty.com/p/get_branches";
     const sessionHeaders = await this.sessionHarvester.getHeaders();
     const headers: Record<string, string> = {
       ...sessionHeaders,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/plain, */*',
-      'Referer': env.QANTY_PORTAL_URL,
-      'Origin': 'https://qanty.com',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      "Content-Type": "application/json",
+      Accept: "application/json, text/plain, */*",
+      Referer: env.QANTY_PORTAL_URL,
+      Origin: "https://qanty.com",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
     };
 
     if (sessionCookie) {
-      headers['Cookie'] = sessionCookie;
+      headers["Cookie"] = sessionCookie;
     }
 
     try {
       console.log(`[QantyClient] Querying POST ${url}...`);
       const sessionId = await this.sessionHarvester.getSessionId();
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify({
           companyId: env.QANTY_COMPANY_CODE,
           withAppoinmentsEnabled: true,
           session: sessionId,
-          origin: 'appointments',
+          origin: "appointments",
           c: env.QANTY_COMPANY_CODE,
         }),
       });
@@ -150,8 +166,10 @@ export class QantyClient {
 
       const data = (await response.json()) as any;
 
-      if (data && data.code === 'INVALID_SESSION') {
-        console.warn(`[QantyClient] fetchBranches received INVALID_SESSION. Invalidating session cache...`);
+      if (data && data.code === "INVALID_SESSION") {
+        console.warn(
+          `[QantyClient] fetchBranches received INVALID_SESSION. Invalidating session cache...`,
+        );
         this.sessionHarvester.invalidateSession();
         return [];
       }
@@ -167,6 +185,4 @@ export class QantyClient {
       return [];
     }
   }
-
 }
-

@@ -1,4 +1,4 @@
-export type SchedulerPhase = 'PEAK' | 'DAYTIME' | 'EVENING' | 'NIGHT';
+export type SchedulerPhase = "PEAK" | "DAYTIME" | "EVENING" | "NIGHT";
 
 export interface AdaptiveIntervalResult {
   intervalMs: number;
@@ -9,7 +9,7 @@ export interface AdaptiveIntervalResult {
 
 export function getAdaptiveInterval(
   date: Date = new Date(),
-  baseOverrideSeconds?: number
+  baseOverrideSeconds?: number,
 ): AdaptiveIntervalResult {
   const hour = date.getHours();
   const minute = date.getMinutes();
@@ -32,7 +32,7 @@ export function getAdaptiveInterval(
     return {
       intervalMs: seconds * 1000,
       intervalSeconds: seconds,
-      phase: 'PEAK',
+      phase: "PEAK",
     };
   }
 
@@ -43,7 +43,7 @@ export function getAdaptiveInterval(
     return {
       intervalMs: seconds * 1000,
       intervalSeconds: seconds,
-      phase: 'DAYTIME',
+      phase: "DAYTIME",
     };
   }
 
@@ -54,7 +54,7 @@ export function getAdaptiveInterval(
     return {
       intervalMs: seconds * 1000,
       intervalSeconds: seconds,
-      phase: 'EVENING',
+      phase: "EVENING",
     };
   }
 
@@ -64,6 +64,6 @@ export function getAdaptiveInterval(
   return {
     intervalMs: seconds * 1000,
     intervalSeconds: seconds,
-    phase: 'NIGHT',
+    phase: "NIGHT",
   };
 }

@@ -73,13 +73,13 @@
 <!-- paste summary lines of all suites -->
 ```
 
-| Suite | Result | Notes |
-|---|---|---|
-| `test:rules` | pass / fail | |
-| `test:guardrails` | pass / fail | |
-| `test:adaptive` | pass / fail | |
-| `test:branches` | pass / fail | |
-| `test:session` | pass / fail | |
+| Suite             | Result      | Notes |
+| ----------------- | ----------- | ----- |
+| `test:rules`      | pass / fail |       |
+| `test:guardrails` | pass / fail |       |
+| `test:adaptive`   | pass / fail |       |
+| `test:branches`   | pass / fail |       |
+| `test:session`    | pass / fail |       |
 
 **Manual / live verification**
 
@@ -102,50 +102,50 @@
 
 ### Security & Privacy (`P-SEC`)
 
-| Guardrail | Rule | Compliant | Notes |
-|---|---|---|---|
-| `P-SEC-01` | No real PII committed; only `profiles.example.json` is tracked | [ ] | |
-| `P-SEC-02` | National IDs masked in all logs and Telegram output (`******7890`) | [ ] | |
-| `P-SEC-03` | Secrets only from `.env`; nothing hardcoded | [ ] | |
+| Guardrail  | Rule                                                               | Compliant | Notes |
+| ---------- | ------------------------------------------------------------------ | --------- | ----- |
+| `P-SEC-01` | No real PII committed; only `profiles.example.json` is tracked     | [ ]       |       |
+| `P-SEC-02` | National IDs masked in all logs and Telegram output (`******7890`) | [ ]       |       |
+| `P-SEC-03` | Secrets only from `.env`; nothing hardcoded                        | [ ]       |       |
 
 ### Network & anti-ban (`P-NET`)
 
-| Guardrail | Rule | Compliant | Notes |
-|---|---|---|---|
-| `P-NET-01` | Polling interval never below **30s** | [ ] | |
-| `P-NET-02` | Random jitter `±5s`–`±15s` on every cycle | [ ] | |
-| `P-NET-03` | 10-minute cooldown on HTTP `429` / `403` | [ ] | |
-| `P-NET-04` | Realistic browser headers on outbound calls | [ ] | |
+| Guardrail  | Rule                                        | Compliant | Notes |
+| ---------- | ------------------------------------------- | --------- | ----- |
+| `P-NET-01` | Polling interval never below **30s**        | [ ]       |       |
+| `P-NET-02` | Random jitter `±5s`–`±15s` on every cycle   | [ ]       |       |
+| `P-NET-03` | 10-minute cooldown on HTTP `429` / `403`    | [ ]       |       |
+| `P-NET-04` | Realistic browser headers on outbound calls | [ ]       |       |
 
 ### Action & automation (`P-ACT`)
 
-| Guardrail | Rule | Compliant | Notes |
-|---|---|---|---|
-| `P-ACT-01` | No autonomous booking; explicit human tap required | [ ] | |
-| `P-ACT-02` | Single booking mutex — one Playwright instance at a time | [ ] | |
-| `P-ACT-03` | 30s hard timeout + `finally` cleanup of contexts/pages | [ ] | |
-| `P-ACT-04` | CAPTCHA detected → halt, screenshot, ask the human | [ ] | |
-| `P-ACT-05` | Screenshot receipt delivered on every booking attempt | [ ] | |
+| Guardrail  | Rule                                                     | Compliant | Notes |
+| ---------- | -------------------------------------------------------- | --------- | ----- |
+| `P-ACT-01` | No autonomous booking; explicit human tap required       | [ ]       |       |
+| `P-ACT-02` | Single booking mutex — one Playwright instance at a time | [ ]       |       |
+| `P-ACT-03` | 30s hard timeout + `finally` cleanup of contexts/pages   | [ ]       |       |
+| `P-ACT-04` | CAPTCHA detected → halt, screenshot, ask the human       | [ ]       |       |
+| `P-ACT-05` | Screenshot receipt delivered on every booking attempt    | [ ]       |       |
 
 ### Development & Git (`P-DEV`)
 
-| Guardrail | Rule | Compliant | Notes |
-|---|---|---|---|
-| `P-DEV-01` | No direct push/merge to `main` | [ ] | |
-| `P-DEV-02` | Work lives in a dedicated `<type>/<scope>/<description>` branch | [ ] | |
-| `P-DEV-03` | TypeScript compiles clean and all suites pass | [ ] | |
+| Guardrail  | Rule                                                            | Compliant | Notes |
+| ---------- | --------------------------------------------------------------- | --------- | ----- |
+| `P-DEV-01` | No direct push/merge to `main`                                  | [ ]       |       |
+| `P-DEV-02` | Work lives in a dedicated `<type>/<scope>/<description>` branch | [ ]       |       |
+| `P-DEV-03` | TypeScript compiles clean and all suites pass                   | [ ]       |       |
 
 ---
 
 ## 6. Risk & rollback
 
-| Question | Answer |
-|---|---|
-| Can this break the live poller in production? | |
-| Can this leak PII into logs, Telegram, or Git? | |
-| Can this trigger Qanty rate limiting or a bot ban (`P-NET`)? | |
-| Blast radius if wrong: single branch / both branches / full reset needed? | |
-| **Rollback plan** (exact revert command or `git revert <sha>`) | |
+| Question                                                                  | Answer |
+| ------------------------------------------------------------------------- | ------ |
+| Can this break the live poller in production?                             |        |
+| Can this leak PII into logs, Telegram, or Git?                            |        |
+| Can this trigger Qanty rate limiting or a bot ban (`P-NET`)?              |        |
+| Blast radius if wrong: single branch / both branches / full reset needed? |        |
+| **Rollback plan** (exact revert command or `git revert <sha>`)            |        |
 
 ---
 

@@ -1,40 +1,69 @@
 {
-  "name": "sms-smart-medicine-scheduler",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "test:rules": "tsx src/tests/testRules.ts",
-    "test:guardrails": "tsx src/tests/testGuardrails.ts",
-    "test:adaptive": "tsx src/tests/testAdaptiveScheduler.ts",
-    "test:branches": "tsx src/tests/testBranches.ts",
-    "test:session": "tsx src/tests/testSessionHarvester.ts",
-    "test:poller": "tsx src/tests/testFunctionalPoller.ts",
-    "test": "npm run test:rules && npm run test:guardrails && npm run test:adaptive && npm run test:branches && npm run test:session && npm run test:poller",
-    "inspect:api": "tsx src/tools/inspectQantyApi.ts",
-    "list:branches": "tsx src/tools/listBranches.ts",
-    "harvest:manual": "tsx src/tools/manualSessionHarvest.ts",
-    "watch:horizon": "tsx src/tools/watchHorizon.ts"
+  "name": "SMS",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "zod": "^4.5.4",
+      "typescript": "^6.0.3",
+      "@types/bun": "^1.4.3",
+      "varlock": "1.18.0",
+      "@trpc/server": "^11.19.0",
+      "better-auth": "1.7.10",
+      "lucide-react": "^1.41.0",
+      "next-themes": "^0.4.6",
+      "react": "^19.2.8",
+      "react-dom": "^19.2.8",
+      "sonner": "^2.0.8",
+      "@trpc/client": "^11.19.0",
+      "@tailwindcss/postcss": "^4.3.3",
+      "@types/react": "^19.2.18",
+      "@types/react-dom": "^19.2.7",
+      "tailwindcss": "^4.3.3",
+      "drizzle-orm": "1.0.0-rc.4"
+    }
   },
-
-
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.30.0",
-  "workspaces": ["packages/*"],
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev:web": "turbo run dev -F web --",
+    "dev:server": "turbo run dev -F server --",
+    "dev:scheduler": "turbo run dev -F @SMS/scheduler --",
+    "start:scheduler": "turbo run start -F @SMS/scheduler --",
+    "test:scheduler": "turbo run test -F @SMS/scheduler --",
+    "test": "turbo run test -F @SMS/scheduler --",
+    "db:push": "turbo run db:push -F @SMS/db --",
+    "db:studio": "turbo run db:studio -F @SMS/db --",
+    "db:generate": "turbo run db:generate -F @SMS/db --",
+    "db:migrate": "turbo run db:migrate -F @SMS/db --",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "auth:generate": "cd apps/server && bun run auth:generate",
+    "check": "oxlint && oxfmt --write"
+  },
   "dependencies": {
-    "dotenv": "^17.4.2",
-    "grammy": "^1.46.0",
-    "playwright": "^1.63.0",
-    "zod": "^4.6.4"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^22.20.2",
-    "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
-  }
+    "@SMS/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "turbo": "^2.11.7",
+    "typescript": "catalog:",
+    "varlock": "catalog:"
+  },
+  "overrides": {
+    "@next/env": "npm:@varlock/nextjs-integration@1.2.2"
+  },
+  "packageManager": "bun@1.4.3"
 }

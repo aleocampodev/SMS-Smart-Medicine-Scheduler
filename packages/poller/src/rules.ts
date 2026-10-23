@@ -16,8 +16,8 @@ export interface RuleEvaluationResult {
 
 export function todayLocalString(date: Date = new Date()): string {
   const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -30,7 +30,7 @@ export function todayLocalString(date: Date = new Date()): string {
 export function evaluateRules(
   rawItems: any[],
   todayStr: string = todayLocalString(),
-  context?: { branchId?: string; branchName?: string }
+  context?: { branchId?: string; branchName?: string },
 ): RuleEvaluationResult {
   const reasons: string[] = [];
 
@@ -49,19 +49,18 @@ export function evaluateRules(
   const matchingSlots: QantySlot[] = [];
 
   for (const item of rawItems) {
-    const status = (item.status || item.state || '').toString().toLowerCase();
-    const slotDate = (item.date || item.appointment_date || item.day || '').toString().split('T')[0];
-    const slotTime = (item.time || item.hour || item.start_time || '').toString();
-    const branchPrefix = context?.branchId ? `${context.branchId}_` : '';
+    const status = (item.status || item.state || "").toString().toLowerCase();
+    const slotDate = (item.date || item.appointment_date || item.day || "")
+      .toString()
+      .split("T")[0];
+    const slotTime = (item.time || item.hour || item.start_time || "").toString();
+    const branchPrefix = context?.branchId ? `${context.branchId}_` : "";
     const slotId = item.id || item.slot_id || `${branchPrefix}${slotDate}_${slotTime}`;
 
     // Rule 2: status is strictly 'free', 'available', or 'disponible'
     // In Qanty, unallocated slots strictly have status 'FREE'.
     // Statuses 'WAITING', 'RESERVED', 'SERVING', and 'FINISHED' indicate occupied/in-progress slots.
-    const isFree =
-      status === 'free' ||
-      status === 'available' ||
-      status === 'disponible';
+    const isFree = status === "free" || status === "available" || status === "disponible";
 
     // Rule 3: date is different from today (future slot)
     const isDifferentDate = Boolean(slotDate && slotDate !== todayStr);
@@ -70,7 +69,7 @@ export function evaluateRules(
       const branchLabel =
         item.branch ||
         item.location ||
-        (context?.branchId ? `Medellin (Branch ${context.branchId})` : 'Main Branch');
+        (context?.branchId ? `Medellin (Branch ${context.branchId})` : "Main Branch");
 
       matchingSlots.push({
         id: slotId,
@@ -78,7 +77,7 @@ export function evaluateRules(
         time: slotTime,
         status,
         branch: branchLabel,
-        specialty: item.specialty || item.service || 'Medicine Dispensing',
+        specialty: item.specialty || item.service || "Medicine Dispensing",
         raw: { ...item, branch_id: context?.branchId },
       });
     }
@@ -90,13 +89,13 @@ export function evaluateRules(
       matchingSlots: [],
       reasons: [
         ...reasons,
-        'Fails Rule 2 or 3: no free slots found for dates different from today',
+        "Fails Rule 2 or 3: no free slots found for dates different from today",
       ],
     };
   }
 
   reasons.push(
-    `Passes Rules 2 & 3: found ${matchingSlots.length} available slots for future dates`
+    `Passes Rules 2 & 3: found ${matchingSlots.length} available slots for future dates`,
   );
 
   return {
@@ -111,7 +110,7 @@ export function evaluateRules(
  */
 export function filterUnnotified(
   slots: QantySlot[],
-  seenSet: Set<string>
+  seenSet: Set<string>,
 ): { newSlots: QantySlot[]; seen: Set<string> } {
   const seen = new Set(seenSet);
   const newSlots = slots.filter((slot) => {

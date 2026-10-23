@@ -39,6 +39,7 @@ sequenceDiagram
 ## 3. Messaging & Inline Keyboard Specification
 
 ### 3.1. Availability Alert Message
+
 ```text
 🚨 *AVAILABLE MEDICINE PICKUP SLOT DETECTED!*
 
@@ -53,6 +54,7 @@ sequenceDiagram
 ```
 
 ### 3.2. Callback Data Format
+
 Compact payload format: `book:<slotHash>:<profileId>` or `dismiss:<slotHash>`.
 
 ---

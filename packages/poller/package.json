@@ -1,11 +1,16 @@
 {
-  "name": "@sms/poller",
+  "name": "@SMS/poller",
   "version": "1.0.0",
   "description": "Functional event-poller core: pure payload, parse, rules and scheduler helpers",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./parse.js": "./src/parse.ts",
+    "./payload.js": "./src/payload.ts",
+    "./rules.js": "./src/rules.ts",
+    "./scheduler.js": "./src/scheduler.ts",
+    "./events.js": "./src/events.ts"
   },
   "peerDependencies": {
     "zod": "^4.6.4"

@@ -1,6 +1,8 @@
 # SMS: Systems Design
+
 ### Deterministic Multi-Branch Healthcare Availability & Sub-Second Playwright Booking
-*sms.smart-medicine-scheduler · Kevin Vicent · Architecture & Systems Manual*
+
+_sms.smart-medicine-scheduler · Kevin Vicent · Architecture & Systems Manual_
 
 ---
 
@@ -13,15 +15,18 @@
 ## 1. Problem and Goals
 
 ### The Problem
+
 Patients requiring essential medication from dispensaries in Medellín (specifically **Branch `6035`** and **Branch `118`**) face severe availability friction. Slots open without prior notice (primarily during early morning releases between 06:00 and 08:00 COT), and human manual navigation through the portal takes 45–90 seconds—by which time slots are consumed by competing users.
 
 Furthermore, direct API automation faces severe hurdles:
+
 1. **Unpredictable Handshake**: The endpoint `POST /p/appointments/list_day_schedule` requires an active session initialized through a reCAPTCHA v3 challenge. Unauthenticated calls yield HTTP `400` or `BOT` rejection codes.
 2. **Strict Rate Limiting**: Repeated rapid polling triggers HTTP `429` / `403` and IP blocking.
 3. **Data Invariants**: The API returns calendar slots with multiple internal statuses (`free`, `waiting`, `busy`). False positives trigger unnecessary patient alerts.
 4. **Zero-PII Compliance**: Automated systems must handle sensitive patient identification documents without risking leakage into version control, telemetry, or unencrypted logs.
 
 ### Goals
+
 - **① Deterministic Multi-Branch Polling**: Continuously poll Branch `6035` and Branch `118` with adaptive frequency and session-aware backoff.
 - **② 3-Rule Decision Core**: Evaluate candidate slots with 0% false positive rate using strict deterministic criteria:
   - **Rule 1 (Volume)**: Slot payload contains $> 2$ JSON schedule records.
@@ -32,6 +37,7 @@ Furthermore, direct API automation faces severe hurdles:
 - **⑤ Strict Operational Guardrails**: Enforce P-SEC (Zero PII, masked IDs), P-NET (30s+ jittered polling, 10m circuit breaker), P-ACT (Human-in-the-loop, single-browser mutex), and P-DEV (feature branch isolation, zero direct push to `main`).
 
 ### Non-Goals
+
 - Autonomous, unconfirmed bookings without patient consent (strictly banned by `P-ACT-01`).
 - Bypassing medical quotas or government prescription validation systems.
 - Distributed brute-force scraping across proxy botnets.
@@ -39,13 +45,13 @@ Furthermore, direct API automation faces severe hurdles:
 
 ### Core Principles & Behavioral Hypotheses
 
-| Assumption / Invariant | Validation & Evidence Mechanism |
-| :--- | :--- |
-| **Qanty Session Lifetime** | Harvested session cookie and ID remain valid for up to 90 minutes; tested via `SessionHarvester` TTL monitors. |
-| **Branch Identifiers** | External branch IDs (`6035`, `118`) map to immutable Firestore company collections (`862...`, `rJ9...`); verified in `testBranches.ts`. |
-| **Slot Availability Semantics** | Only `status === 'free'` indicates real bookable capacity; `waiting` represents reservations in progress. |
-| **Calendar Horizon** | Qanty rejects appointments booked for past or current-day dates; only $D+1$ onwards is valid. |
-| **Human-in-the-Loop Latency** | Telegram push + human button tap takes 2–8s; automated browser filling must take $<1\text{s}$ to win the race condition. |
+| Assumption / Invariant          | Validation & Evidence Mechanism                                                                                                         |
+| :------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| **Qanty Session Lifetime**      | Harvested session cookie and ID remain valid for up to 90 minutes; tested via `SessionHarvester` TTL monitors.                          |
+| **Branch Identifiers**          | External branch IDs (`6035`, `118`) map to immutable Firestore company collections (`862...`, `rJ9...`); verified in `testBranches.ts`. |
+| **Slot Availability Semantics** | Only `status === 'free'` indicates real bookable capacity; `waiting` represents reservations in progress.                               |
+| **Calendar Horizon**            | Qanty rejects appointments booked for past or current-day dates; only $D+1$ onwards is valid.                                           |
+| **Human-in-the-Loop Latency**   | Telegram push + human button tap takes 2–8s; automated browser filling must take $<1\text{s}$ to win the race condition.                |
 
 ---
 
@@ -104,14 +110,16 @@ Following Kahneman's cognitive paradigm, SMS splits into two distinct operationa
 ### Component Details
 
 #### 1. System 2: Discovery & Adaptive Intelligence (The Harness)
+
 - **Session Harvester (`SessionHarvester`)**: Launches a stealth Chromium instance to navigate `https://qanty.com/dispensario-medic-colombia`, triggers the background `regular_start` challenge, harvests cookies and authenticated session IDs, and caches them for 90 minutes. If reCAPTCHA scores flag a bot (`code === 'BOT'`), it activates a 10-minute cooldown to prevent browser spam (`P-NET-03`).
 - **Adaptive Scheduler (`AdaptiveScheduler`)**: Adjusts polling intervals based on dispensary release cycles:
-  - *Peak Window (06:00 – 08:00 COT)*: Aggressive cadence (~30s base + jitter).
-  - *Day Window (08:00 – 18:00 COT)*: Moderate cadence (~60s base + jitter).
-  - *Off-Peak / Night (18:00 – 06:00 COT)*: Conservation cadence (~120s base + jitter).
+  - _Peak Window (06:00 – 08:00 COT)_: Aggressive cadence (~30s base + jitter).
+  - _Day Window (08:00 – 18:00 COT)_: Moderate cadence (~60s base + jitter).
+  - _Off-Peak / Night (18:00 – 06:00 COT)_: Conservation cadence (~120s base + jitter).
 - **Circuit Breaker**: Tracks HTTP response codes. If an upstream `429 Too Many Requests` or `403 Forbidden` occurs, all outbound requests halt for 10 minutes (`P-NET-01`).
 
 #### 2. Shared Memory: Domain Ontology & Contracts
+
 - **Branch Ontology**:
   - `6035`: Medellín Principal (Dispensario Carrera 43A) $\rightarrow$ Firestore ID `86234...`
   - `118`: Medellín Oriental (Dispensario Calle 50) $\rightarrow$ Firestore ID `rJ931...`
@@ -119,6 +127,7 @@ Following Kahneman's cognitive paradigm, SMS splits into two distinct operationa
 - **State Deduplication**: An in-memory cache tracking notified slots (`${branchId}:${date}:${time}`). Even if the poller queries every 30s, identical openings are only broadcast once.
 
 #### 3. System 1: Deterministic Engine & Booking Runtime
+
 - **Event Poller (`@sms/poller`)**: Pure functional core without mutable module state or class inheritance. Exposes `createPoller` and `onAvailability`, emitting standard `CustomEvent` instances over `EventTarget`. Concurrently queries configured branches using `Promise.all`.
 - **Decision Core (`rules.ts`)**: Evaluates raw responses using pure mathematical logic:
   $$\text{Valid}(\text{slots}) = (|\text{slots}| > 2) \land (\exists s \in \text{slots} : s.\text{status} = \text{'free'}) \land (s.\text{date} > \text{today}_{\text{Bogota}})$$
@@ -135,22 +144,24 @@ Following Kahneman's cognitive paradigm, SMS splits into two distinct operationa
 
 ## 3. Architecture Decisions & Trade-Off Matrix
 
-| Architectural Seam | Chosen Solution | Rejected Alternatives & Rationale |
-| :--- | :--- | :--- |
-| **Runtime & Language** | **Node.js v20+ / Bun & TypeScript Strict Mode** (`ADR-001`) | *Python / Scrapy*: Too slow for sub-second UI form completion; weak typed integration with Telegram frameworks.<br>*Go*: Excellent concurrency, but Playwright ecosystem is second-tier compared to Node.js. |
-| **Browser Automation** | **Microsoft Playwright with Stealth Flags** (`ADR-002`) | *Puppeteer*: Prone to anti-bot fingerprints on modern Cloudflare/reCAPTCHA challenges.<br>*Selenium*: Heavyweight, slower startup latency ($>3\text{s}$), unreliable headless event sniffing. |
-| **HTTP & Networking** | **Native Fetch API + In-Memory Circuit Breaker** (`ADR-003`) | *Axios*: Unnecessary dependency overhead; does not leverage native Node 20 stream optimizations.<br>*Got / Request*: Deprecated or redundant with modern web standards. |
-| **Telegram Framework** | **grammY** (`ADR-004`) | *Telegraf*: Stale TypeScript definitions, less robust typed inline keyboard builder.<br>*Raw Bot API*: High maintenance burden for callback routing and webhook session state. |
-| **Data Validation** | **Zod Schemas** (`ADR-005`) | *Joi / Yup*: Poor static TypeScript type inference.<br>*JSON Schema raw*: Cumbersome DX without automated type extraction. |
-| **Poller Architecture** | **Functional Event Poller (`packages/poller`)** | *Monolithic OOP Poller*: Tight coupling between network I/O, rule evaluation, and Telegram messaging prevented independent testing and Bun bundling. |
-| **Booking Safety** | **Human-in-the-Loop Mutex Lock (`P-ACT-01`)** | *Fully Autonomous Booker*: Risk of booking wrong appointments, burning patient quota, or violating ethical boundaries. |
+| Architectural Seam      | Chosen Solution                                              | Rejected Alternatives & Rationale                                                                                                                                                                            |
+| :---------------------- | :----------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Runtime & Language**  | **Node.js v20+ / Bun & TypeScript Strict Mode** (`ADR-001`)  | _Python / Scrapy_: Too slow for sub-second UI form completion; weak typed integration with Telegram frameworks.<br>_Go_: Excellent concurrency, but Playwright ecosystem is second-tier compared to Node.js. |
+| **Browser Automation**  | **Microsoft Playwright with Stealth Flags** (`ADR-002`)      | _Puppeteer_: Prone to anti-bot fingerprints on modern Cloudflare/reCAPTCHA challenges.<br>_Selenium_: Heavyweight, slower startup latency ($>3\text{s}$), unreliable headless event sniffing.                |
+| **HTTP & Networking**   | **Native Fetch API + In-Memory Circuit Breaker** (`ADR-003`) | _Axios_: Unnecessary dependency overhead; does not leverage native Node 20 stream optimizations.<br>_Got / Request_: Deprecated or redundant with modern web standards.                                      |
+| **Telegram Framework**  | **grammY** (`ADR-004`)                                       | _Telegraf_: Stale TypeScript definitions, less robust typed inline keyboard builder.<br>_Raw Bot API_: High maintenance burden for callback routing and webhook session state.                               |
+| **Data Validation**     | **Zod Schemas** (`ADR-005`)                                  | _Joi / Yup_: Poor static TypeScript type inference.<br>_JSON Schema raw_: Cumbersome DX without automated type extraction.                                                                                   |
+| **Poller Architecture** | **Functional Event Poller (`packages/poller`)**              | _Monolithic OOP Poller_: Tight coupling between network I/O, rule evaluation, and Telegram messaging prevented independent testing and Bun bundling.                                                         |
+| **Booking Safety**      | **Human-in-the-Loop Mutex Lock (`P-ACT-01`)**                | _Fully Autonomous Booker_: Risk of booking wrong appointments, burning patient quota, or violating ethical boundaries.                                                                                       |
 
 ---
 
 ## 4. Verification, Guardrails & Governance
 
 ### Verification Suite (`npm test`)
+
 The test harness runs hermetically without making live outbound network requests or launching actual browsers:
+
 1. `testRules.ts`: Validates that Rule 1, Rule 2 (including WAITING slot exclusion), and Rule 3 evaluate identically across single and nested payload structures.
 2. `testGuardrails.ts`: Validates automated checks for `P-SEC`, `P-ACT`, and `P-NET` invariants.
 3. `testAdaptiveScheduler.ts`: Confirms mathematical correctness of peak/off-peak intervals and verifies jitter randomness boundaries.
@@ -175,6 +186,8 @@ The test harness runs hermetically without making live outbound network requests
 ```
 
 ### Interactive Architecture Diagram
+
 The validated interactive HTML diagram is published and available at:
+
 - **Interactive SVG/HTML Diagram**: [`.archify/architecture-sms-scheduler-20261013-161115/sms-architecture.html`](file:///home/ale/Work/sms-smart-medicine-scheduler/.archify/architecture-sms-scheduler-20261013-161115/sms-architecture.html)
 - **Specification Source**: [`.archify/architecture-sms-scheduler-20261013-161115/candidate.json`](file:///home/ale/Work/sms-smart-medicine-scheduler/.archify/architecture-sms-scheduler-20261013-161115/candidate.json)

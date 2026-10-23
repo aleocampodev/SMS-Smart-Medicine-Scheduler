@@ -1,13 +1,11 @@
-import type { QantySlot, RuleEvaluationResult } from './rules.js';
-
 export type PollerEventType =
-  | 'poll:start'
-  | 'poll:success'
-  | 'poll:empty'
-  | 'poll:error'
-  | 'availability:found'
-  | 'circuit:trip'
-  | 'circuit:reset';
+  | "poll:start"
+  | "poll:success"
+  | "poll:empty"
+  | "poll:error"
+  | "availability:found"
+  | "circuit:trip"
+  | "circuit:reset";
 
 export interface PollerEvent {
   type: PollerEventType;

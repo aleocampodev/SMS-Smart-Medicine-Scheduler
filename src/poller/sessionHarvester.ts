@@ -1,5 +1,5 @@
-import { chromium, BrowserContext } from 'playwright';
-import { env } from '../config/env.js';
+import { chromium, BrowserContext } from "playwright";
+import { env } from "../config/env.js";
 
 export interface QantySession {
   sessionId?: string;
@@ -60,28 +60,31 @@ export class SessionHarvester {
     try {
       const session = await this.getSession();
       const headers: Record<string, string> = {
-        'User-Agent':
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'Referer': env.QANTY_PORTAL_URL,
-        'Origin': 'https://qanty.com',
-        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        Referer: env.QANTY_PORTAL_URL,
+        Origin: "https://qanty.com",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
       };
 
       if (session.cookieString) {
-        headers['Cookie'] = session.cookieString;
+        headers["Cookie"] = session.cookieString;
       }
       if (session.authorizationToken) {
-        headers['Authorization'] = `Bearer ${session.authorizationToken}`;
+        headers["Authorization"] = `Bearer ${session.authorizationToken}`;
       }
 
       return headers;
     } catch (err: any) {
-      console.warn('[SessionHarvester] Warning: could not harvest live session headers:', err.message);
+      console.warn(
+        "[SessionHarvester] Warning: could not harvest live session headers:",
+        err.message,
+      );
       return {
-        'User-Agent':
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'Referer': env.QANTY_PORTAL_URL,
-        'Origin': 'https://qanty.com',
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        Referer: env.QANTY_PORTAL_URL,
+        Origin: "https://qanty.com",
       };
     }
   }
@@ -91,7 +94,7 @@ export class SessionHarvester {
    */
   public async refreshSession(): Promise<QantySession> {
     if (this.isHarvesting) {
-      console.log('[SessionHarvester] Session harvest already in progress. Waiting...');
+      console.log("[SessionHarvester] Session harvest already in progress. Waiting...");
       while (this.isHarvesting) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
@@ -99,7 +102,7 @@ export class SessionHarvester {
     }
 
     this.isHarvesting = true;
-    console.log('[SessionHarvester] 🔄 Harvesting fresh session from Qanty portal...');
+    console.log("[SessionHarvester] 🔄 Harvesting fresh session from Qanty portal...");
 
     let activeContext: BrowserContext | null = null;
     let browser: any = null;
@@ -108,13 +111,13 @@ export class SessionHarvester {
       browser = await chromium.launch({
         headless: env.PLAYWRIGHT_HEADLESS,
         timeout: env.BROWSER_TIMEOUT_MS,
-        args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+        args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
       });
 
       const context = await browser.newContext({
         viewport: { width: 1280, height: 720 },
         userAgent:
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
       });
       activeContext = context;
 
@@ -124,15 +127,15 @@ export class SessionHarvester {
       let regularStartRejection: string | undefined;
 
       // Listen for authenticated network exchanges and session token response
-      page.on('request', (req: any) => {
+      page.on("request", (req: any) => {
         const headers = req.headers();
-        if (headers['authorization']) {
-          capturedAuthToken = headers['authorization'].replace(/^Bearer\s+/i, '');
+        if (headers["authorization"]) {
+          capturedAuthToken = headers["authorization"].replace(/^Bearer\s+/i, "");
         }
       });
 
-      page.on('response', async (res: any) => {
-        if (res.url().includes('regular_start')) {
+      page.on("response", async (res: any) => {
+        if (res.url().includes("regular_start")) {
           try {
             const data = await res.json();
             if (data && data.id) {
@@ -146,7 +149,7 @@ export class SessionHarvester {
       });
 
       await page.goto(env.QANTY_PORTAL_URL, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: "domcontentloaded",
         timeout: env.BROWSER_TIMEOUT_MS,
       });
 
@@ -162,10 +165,10 @@ export class SessionHarvester {
             return (
               (window as any).sessionId ||
               (window as any).__session ||
-              sessionStorage.getItem('session') ||
-              sessionStorage.getItem('sessionId') ||
-              localStorage.getItem('session') ||
-              localStorage.getItem('sessionId') ||
+              sessionStorage.getItem("session") ||
+              sessionStorage.getItem("sessionId") ||
+              localStorage.getItem("session") ||
+              localStorage.getItem("sessionId") ||
               undefined
             );
           });
@@ -177,14 +180,12 @@ export class SessionHarvester {
       if (!capturedSessionId) {
         const reason = regularStartRejection
           ? `Qanty rejected session handshake with code '${regularStartRejection}' (reCAPTCHA verification failed)`
-          : 'no session id was captured from regular_start';
+          : "no session id was captured from regular_start";
         throw new Error(`Session harvest failed: ${reason}`);
       }
 
       const rawCookies = await context.cookies();
-      const cookieString = rawCookies
-        .map((c: any) => `${c.name}=${c.value}`)
-        .join('; ');
+      const cookieString = rawCookies.map((c: any) => `${c.name}=${c.value}`).join("; ");
 
       const now = Date.now();
       this.currentSession = {
@@ -197,16 +198,16 @@ export class SessionHarvester {
       };
 
       console.log(
-        `[SessionHarvester] ✅ Session harvested successfully. (${rawCookies.length} cookies, sessionId: ${capturedSessionId ? 'present' : 'pending'}, valid for 90m)`
+        `[SessionHarvester] ✅ Session harvested successfully. (${rawCookies.length} cookies, sessionId: ${capturedSessionId ? "present" : "pending"}, valid for 90m)`,
       );
       return this.currentSession;
     } catch (error: any) {
-      console.error('[SessionHarvester] Failed to harvest session:', error.message);
+      console.error("[SessionHarvester] Failed to harvest session:", error.message);
       // Cache the failure for a cooldown window so we do not relaunch a browser
       // every polling cycle and worsen anti-bot scoring (see P-NET-03 intent).
       const now = Date.now();
       this.currentSession = {
-        cookieString: '',
+        cookieString: "",
         companyId: env.QANTY_COMPANY_CODE,
         createdAt: now,
         expiresAt: now + this.HARVEST_FAILURE_COOLDOWN_MS, // cooldown before next harvest attempt
@@ -217,14 +218,13 @@ export class SessionHarvester {
       if (browser) await browser.close().catch(() => {});
       this.isHarvesting = false;
     }
-
   }
 
   /**
    * Resets active session cache upon receiving an INVALID_SESSION response
    */
   public invalidateSession(): void {
-    console.log('[SessionHarvester] ⚠️ Invalidating active session cache.');
+    console.log("[SessionHarvester] ⚠️ Invalidating active session cache.");
     this.currentSession = null;
   }
 }

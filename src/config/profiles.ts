@@ -1,13 +1,13 @@
-import fs from 'fs';
-import path from 'path';
-import { Profile, ProfileSchema } from '../types/index.js';
-import { z } from 'zod';
+import fs from "fs";
+import path from "path";
+import { Profile, ProfileSchema } from "../types/index.js";
+import { z } from "zod";
 
 const ProfilesArraySchema = z.array(ProfileSchema);
 
 export function loadProfiles(): Profile[] {
-  const customProfilesPath = path.resolve(process.cwd(), 'profiles.json');
-  const exampleProfilesPath = path.resolve(process.cwd(), 'profiles.example.json');
+  const customProfilesPath = path.resolve(process.cwd(), "profiles.json");
+  const exampleProfilesPath = path.resolve(process.cwd(), "profiles.example.json");
 
   const filePathToRead = fs.existsSync(customProfilesPath)
     ? customProfilesPath
@@ -19,7 +19,7 @@ export function loadProfiles(): Profile[] {
   }
 
   try {
-    const fileContent = fs.readFileSync(filePathToRead, 'utf-8');
+    const fileContent = fs.readFileSync(filePathToRead, "utf-8");
     const parsedJson = JSON.parse(fileContent);
     return ProfilesArraySchema.parse(parsedJson);
   } catch (error) {
@@ -39,9 +39,9 @@ export function getProfileById(id: string): Profile | undefined {
  */
 export function maskDocument(documentNumber: string): string {
   if (!documentNumber || documentNumber.length <= 4) {
-    return '****';
+    return "****";
   }
   const visiblePart = documentNumber.slice(-4);
-  const maskedPart = '*'.repeat(documentNumber.length - 4);
+  const maskedPart = "*".repeat(documentNumber.length - 4);
   return `${maskedPart}${visiblePart}`;
 }
