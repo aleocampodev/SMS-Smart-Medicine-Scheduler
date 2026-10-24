@@ -22,7 +22,7 @@ SMS is a resilience-driven autonomous system that monitors healthcare dispensary
 - **HTTP Client**: Node.js Native Fetch API with in-memory Circuit Breaker
 - **Messaging**: grammY (Telegram Bot framework with typed InlineKeyboards)
 - **Validation**: Zod (Runtime schema validation and data transformations)
-- **Package Manager**: pnpm
+- **Monorepo & Build System**: Turborepo with Bun 1.4+ (Catalog & Workspaces)
 
 ---
 

@@ -12,6 +12,13 @@
     "./scheduler.js": "./src/scheduler.ts",
     "./events.js": "./src/events.ts"
   },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@SMS/config": "workspace:*",
+    "typescript": "catalog:"
+  },
   "peerDependencies": {
     "zod": "^4.6.4"
   }
