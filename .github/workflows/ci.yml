@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Build & Quality Gate (P-DEV-03)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      NEXT_PUBLIC_SERVER_URL: "http://localhost:3000"
+      BETTER_AUTH_SECRET: "01234567890123456789012345678901"
+      BETTER_AUTH_URL: "http://localhost:3000"
+      CORS_ORIGIN: "http://localhost:3001"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/sms"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Typecheck
+        run: bun run check-types
+
+      - name: Code Quality & Formatting
+        run: bun run check
+
+      - name: Monorepo Build
+        run: bun run build
+
+      - name: Run full test suite
+        run: bun run test
+
+      - name: Verify Bun workspace core bundles
+        run: bun build packages/poller/src/index.ts --outdir /tmp/poller-ci-check --target bun

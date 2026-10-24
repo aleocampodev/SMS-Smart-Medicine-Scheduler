@@ -12,6 +12,7 @@
 To enable the scheduler to monitor appointment slots with 100% accuracy without relying on synthetic payloads, we must discover the live schema directly from the official Qanty medicine dispensing portal.
 
 ### Core Objectives:
+
 1. **Intercept Genuine HTTP Traffic**: Record all XHR / Fetch network transactions from `qanty.com` during initial portal load and appointment navigation.
 2. **Discover Key Operational Parameters**:
    - `company_id` / `c`: Verify transmission of company code `Lpds45xBMVIpsXiSxaTy`.

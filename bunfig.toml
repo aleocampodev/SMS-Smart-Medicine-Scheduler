@@ -1,0 +1,7 @@
+[install]
+# Bun workspace monorepo: root + packages/*
+exact = false
+
+[test]
+# Keep Bun test runner compatible with existing tsx suites
+preload = []

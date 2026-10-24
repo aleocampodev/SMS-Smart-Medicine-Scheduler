@@ -1,0 +1,23 @@
+{
+  "name": "@SMS/api",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@SMS/auth": "workspace:*",
+    "@SMS/db": "workspace:*",
+    "@SMS/poller": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@SMS/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

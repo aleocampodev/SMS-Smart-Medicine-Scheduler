@@ -98,11 +98,14 @@ sms-smart-medicine-scheduler/
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
+
 - **Node.js**: v18.0.0 or later (v20+ recommended)
 - **pnpm** (or npm)
 
 ### 2. Installation
+
 Clone the repository and install dependencies:
+
 ```bash
 git clone https://github.com/aleocampodev/SMS-Smart-Medicine-Scheduler.git
 cd SMS-Smart-Medicine-Scheduler
@@ -110,27 +113,36 @@ pnpm install
 ```
 
 Install the Playwright browser:
+
 ```bash
 npx playwright install chromium
 ```
 
 ### 3. Configure Environment Variables
+
 Copy the template and fill in your Telegram credentials:
+
 ```bash
 cp .env.example .env
 ```
+
 Key configuration fields:
+
 - `TELEGRAM_BOT_TOKEN`: Token obtained from [@BotFather](https://t.me/botfather).
 - `TELEGRAM_CHAT_ID`: Your personal or group chat ID (find it using [@userinfobot](https://t.me/userinfobot)).
 - `POLL_INTERVAL_SECONDS`: Base interval in seconds between checks (default: `45`).
 - `PLAYWRIGHT_HEADLESS`: Set to `true` for headless background runs, or `false` to view the browser window during testing.
 
 ### 4. Configure User Profiles
+
 Create your local profiles file:
+
 ```bash
 cp profiles.example.json profiles.json
 ```
+
 Edit `profiles.json` with the details of each family member who needs appointments:
+
 ```json
 [
   {
@@ -146,6 +158,7 @@ Edit `profiles.json` with the details of each family member who needs appointmen
   }
 ]
 ```
+
 > [!NOTE]
 > `profiles.json` is strictly ignored by Git to guarantee personal health and identity data privacy (`G-SEC-01`).
 
@@ -160,6 +173,7 @@ npm test
 ```
 
 Expected output:
+
 ```text
 🧪 Running RulesEngine unit tests...
 ✅ Passed all 3 Business Rules and deduplication cache
@@ -183,11 +197,13 @@ Expected output:
 ## ▶️ Running in Production
 
 ### Development Mode (with Live Reload)
+
 ```bash
 npm run dev
 ```
 
 ### Production Mode
+
 ```bash
 npm run build
 npm start
@@ -206,10 +222,8 @@ npm start
   - **[ADR-004: grammY Telegram Framework](docs/decisions/ADR-004-Grammy-Telegram-Framework.md)** — Rationale for modern typed bot middleware and inline buttons.
   - **[ADR-005: Zod Schema Validation](docs/decisions/ADR-005-Zod-Schema-Validation.md)** — Rationale for runtime schema validation, array transforms, and PII protection.
 
-
 ---
 
 ## 📜 License
 
 This project is licensed under the [MIT License](LICENSE).
-

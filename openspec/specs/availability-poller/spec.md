@@ -16,6 +16,7 @@ This module serves as the primary sensor of the system. Its sole responsibility 
 ## 2. API Integration Contract
 
 ### 2.1. Endpoint Specification
+
 - **URL**: `https://qanty.com/p/appointments/list_day_schedule`
 - **HTTP Method**: `POST`
 - **Mandatory Headers**:
@@ -35,6 +36,7 @@ This module serves as the primary sensor of the system. Its sole responsibility 
   ```
 
 ### 2.2. Branch Discovery & Configuration Contract
+
 - **URL**: `https://qanty.com/p/get_branches`
 - **HTTP Method**: `POST`
 - **Session Prerequisite**: Requires established company session (`c=Lpds45xBMVIpsXiSxaTy`) via portal initialization. Direct unauthenticated requests return `INVALID_SESSION`.
@@ -45,7 +47,6 @@ This module serves as the primary sensor of the system. Its sole responsibility 
   - Interactive CLI discovery provided via `npm run list:branches`.
 
 ---
-
 
 ## 3. The 3 Business Rules Engine
 
@@ -67,6 +68,7 @@ flowchart TD
 ```
 
 ### 3.1. Formal Definition of the 3 Rules
+
 1. **Rule 1 (Data Multiplicity)**: The API must return more than 2 items (`rawItems.length > 2`). Responses with 0, 1, or 2 items indicate empty schedule frames or static placeholder responses.
 2. **Rule 2 (Availability Status)**: The slot's `status` or `state` field must be explicitly `'free'` or `'available'`.
 3. **Rule 3 (Future Date Only)**: The slot's `date` or `day` must not match the current date (`slot.date !== currentDate`). Same-day appointments are excluded due to cutoff deadlines and clinic closures.

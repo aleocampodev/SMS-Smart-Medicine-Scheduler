@@ -22,7 +22,7 @@ SMS is a resilience-driven autonomous system that monitors healthcare dispensary
 - **HTTP Client**: Node.js Native Fetch API with in-memory Circuit Breaker
 - **Messaging**: grammY (Telegram Bot framework with typed InlineKeyboards)
 - **Validation**: Zod (Runtime schema validation and data transformations)
-- **Package Manager**: pnpm
+- **Monorepo & Build System**: Turborepo with Bun 1.4+ (Catalog & Workspaces)
 
 ---
 
@@ -55,23 +55,28 @@ npm run inspect:api        # Network traffic sniffer (IP-001)
 Every agent and human contributor must strictly adhere to the project guardrails:
 
 ### 🛑 Strict Push & Branch Policy (`P-DEV-01`)
+
 - **NEVER push directly to `main` (`git push origin main` is prohibited).**
 - **NEVER merge directly to `main` in local git.**
 - All work (`feat`, `fix`, `docs`, `refactor`, `test`) must be conducted in dedicated branches (`<type>/<scope>/<description>`).
 - All integrations into `main` must be performed through GitHub Pull Requests (`gh pr create` and `gh pr merge`).
 
 ### 🌐 Strict Language Policy
+
 - All codebase elements—including source code, comments, logs, documentation, ADRs, commit messages, and PR descriptions—must be written strictly in **English**.
 
 ### 🔒 Privacy & PII Protection (`P-SEC-01`, `P-SEC-02`)
+
 - Real identity documents, names, and phone numbers in `profiles.json` must **NEVER** be committed to Git (`.gitignore` enforced).
 - All logs and Telegram messages displaying national IDs must mask leading digits (e.g. `******7890`).
 
 ### ⚡ Networking & Rate Limiting (`P-NET-01`, `P-NET-03`)
+
 - Minimum polling cadence is 30 seconds with random jitter ($\pm 5\text{s}$ to $\pm 15\text{s}$).
 - Outgoing requests must halt for 10 minutes upon receiving HTTP `429` or `403` (Circuit Breaker).
 
 ### 🤖 Action Safety & Human-in-the-Loop (`P-ACT-01`, `P-ACT-02`)
+
 - The system must never book appointments autonomously without human confirmation. A user must tap a Telegram inline button.
 - Strictly **one** Playwright browser instance may book at any time (concurrency mutex lock).
 
@@ -80,6 +85,7 @@ Every agent and human contributor must strictly adhere to the project guardrails
 ## 5. Architectural Context Pointers
 
 For in-depth specifications and architectural context, consult:
+
 - **Project Guardrails**: [`docs/guardrails.md`](docs/guardrails.md)
 - **Domain & Technical Glossary**: [`docs/glossary.md`](docs/glossary.md)
 - **Architecture Decisions**: [`docs/decisions/`](docs/decisions/)

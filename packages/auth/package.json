@@ -1,0 +1,23 @@
+{
+  "name": "@SMS/auth",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@SMS/db": "workspace:*",
+    "@better-auth/core": "1.7.10",
+    "@better-auth/drizzle-adapter": "1.7.10",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@SMS/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

@@ -10,6 +10,7 @@
 ## 1. Purpose & Scope
 
 To ensure the poller and booking engine operate deterministically without schema guesswork, this module:
+
 1. Navigates to the real Qanty portal (`https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`).
 2. Intercepts **all XHR / Fetch network requests** emitted by the SPA.
 3. Records full request and response payloads (headers, query params, cookies, JSON bodies).
@@ -44,10 +45,12 @@ To ensure the poller and booking engine operate deterministically without schema
 ```
 
 ### 2.1. Inputs
+
 - `targetUrl`: Portal URL (`https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`).
 - `mode`: Headful mode (to allow interactive branch selection) or headless.
 
 ### 2.2. Outputs
+
 - Dumps directory: `dumps/api/` (ignored in git).
 - Summary file: `dumps/api/discovered_summary.json` containing:
   - Detected endpoints.
