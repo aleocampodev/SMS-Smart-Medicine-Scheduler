@@ -19,7 +19,9 @@ app.use(
   }),
 );
 
-app.all("/api/auth{/*path}", toNodeHandler(auth));
+app.all("/api/auth{/*path}", (req, res) => {
+  return toNodeHandler(auth)(req as any, res as any);
+});
 
 app.use(
   "/trpc",
