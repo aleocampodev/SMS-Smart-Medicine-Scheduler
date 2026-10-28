@@ -84,12 +84,18 @@ Every agent and human contributor must strictly adhere to the project guardrails
 
 ## 5. Development Workflow — Organic-Driven Development (ODD)
 
-This repository follows **ODD** (Organic-Driven Development) from Gentle-AI:
-- **Authorization First**: Never mutate code without explicit requirement or confirmation. Always explore dependencies before touching files.
-- **Keep Small Work Small**: Small tasks and fixes do not require heavy planning files; execute directly with tests and reviewable diffs.
-- **Substantial Work Tracking**: Substantial features create a tracking document in `odd/tasks/<feature-name>.md` and mirror progress in **Engram** (`odd/<feature-name>/tasks`).
-- **TDD by Default**: Write failing tests before implementation for any deterministic behavior.
-- **Work-Unit Commits**: Slice changes into focused commits with a ~400 lines budget, pairing tests, code, and documentation.
+This repository follows **ODD** (Organic-Driven Development) from Gentle-AI v4.3+:
+- **1. Authorization First**: Stay read-only until code mutation is explicitly authorized.
+- **2. Proportionate Exploration**: Map context, patterns, and dependencies before modifying any code.
+- **3. Resolve Uncertainty**: Bounded research for blockers; never speculate or hedge.
+- **4. Keep Small Work Small**: Small tasks and bugfixes require no durable task file; execute directly with tests and reviewable diffs.
+- **5. Track Substantial Work Before First Write**: Create `odd/tasks/<feature-name>.md` and mirror the complete document to Engram (`odd/<feature-name>/tasks`). The file strictly contains:
+  - Header (2-3 lines)
+  - `## Specs`: Numbered `S#` quoting the user's requirements and constraints verbatim (never paraphrased).
+  - `## Tasks`: Exactly one line per task (`ID`, linked `S#`, route, commit).
+  - `## Log`: User's original request verbatim (`L1`), followed by verbatim corrections and evidence (`L2`...).
+- **6. Implement Task by Task (TDD)**: RED (failing test) $\rightarrow$ GREEN (minimal implementation) $\rightarrow$ REFACTOR. Check off items only after outcomes are observed. Work-unit commits in slices of ~400 lines max.
+- **7. Close**: Report verified outcomes, checks ledger (passed/failed/skipped), and explicit next steps.
 
 ---
 
