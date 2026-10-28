@@ -1,7 +1,7 @@
 # Implementation Plan: IP-001 — Qanty API Discovery & Reverse Engineering
 
 **Plan ID**: `IP-001`  
-**Related OpenSpec**: [`openspec/specs/api-discovery/spec.md`](../../openspec/specs/api-discovery/spec.md)  
+**Related Spec**: [`docs/specs/api-discovery/spec.md`](../specs/api-discovery/spec.md)  
 **Status**: `Ready for Execution`  
 **Target Portal**: `https://qanty.com/portals/appointments?c=Lpds45xBMVIpsXiSxaTy`
 
