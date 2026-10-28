@@ -22,7 +22,7 @@
 
 **Branch:** `<!-- e.g. feat/infra/event-poller-functional-bun -->`
 
-**Related issue / board item:** <!-- #12, openspec/specs/..., or "none" -->
+**Related issue / board item:** <!-- #12, odd/tasks/..., or "none" -->
 
 ---
 
@@ -171,5 +171,5 @@
 - [ ] `npm test` passes all suites
 - [ ] No secrets, tokens, or real identity data in the diff
 - [ ] Debug leftovers removed (`console.log` spam, `.only`, commented-out blocks, stray build artifacts)
-- [ ] Documentation updated (`README.md`, `docs/`, ADRs, `openspec/specs/`) if behaviour or interfaces changed
+- [ ] Documentation updated (`README.md`, `docs/`, ADRs, `odd/`) if behaviour or interfaces changed
 - [ ] Screenshots attached for any user-facing Telegram or browser change (redacted)

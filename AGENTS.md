@@ -9,7 +9,7 @@ Welcome to **SMS (Smart Medicine Scheduler)**. This document provides the Level 
 SMS is a resilience-driven autonomous system that monitors healthcare dispensary appointment availability on the **Qanty** portal, applies deterministic business rules, delivers 1-click booking alerts to Telegram, and executes sub-second Playwright form completion with Addy Osmani performance patterns.
 
 - **Primary Target Dispensaries**: Medellín Branch `6035` and Medellín Branch `118`.
-- **Operating Methodology**: Spec-Driven Development, Human-in-the-loop, Zero-PII-leakage.
+- **Operating Methodology**: Organic-Driven Development (ODD), Human-in-the-loop, Zero-PII-leakage.
 
 ---
 
@@ -82,10 +82,28 @@ Every agent and human contributor must strictly adhere to the project guardrails
 
 ---
 
-## 5. Architectural Context Pointers
+## 5. Development Workflow — Organic-Driven Development (ODD)
+
+This repository follows **ODD** (Organic-Driven Development) from Gentle-AI:
+- **Authorization First**: Never mutate code without explicit requirement or confirmation. Always explore dependencies before touching files.
+- **Keep Small Work Small**: Small tasks and fixes do not require heavy planning files; execute directly with tests and reviewable diffs.
+- **Substantial Work Tracking**: Substantial features create a tracking document in `odd/tasks/<feature-name>.md` and mirror progress in **Engram** (`odd/<feature-name>/tasks`).
+- **TDD by Default**: Write failing tests before implementation for any deterministic behavior.
+- **Work-Unit Commits**: Slice changes into focused commits with a ~400 lines budget, pairing tests, code, and documentation.
+
+---
+
+## 6. Architectural Context Pointers
 
 For in-depth specifications and architectural context, consult:
 
+- **ODD Guidelines & Task Directory**: [`odd/README.md`](odd/README.md) & [`odd/tasks/`](odd/tasks/)
+- **Project Specifications**: [`docs/specs/`](docs/specs/)
+  - Availability Poller: [`docs/specs/availability-poller/spec.md`](docs/specs/availability-poller/spec.md)
+  - Telegram Notifier: [`docs/specs/telegram-notifier/spec.md`](docs/specs/telegram-notifier/spec.md)
+  - Playwright Booker: [`docs/specs/playwright-booker/spec.md`](docs/specs/playwright-booker/spec.md)
+  - Guardrails & Safety: [`docs/specs/guardrails/spec.md`](docs/specs/guardrails/spec.md)
+  - API Discovery: [`docs/specs/api-discovery/spec.md`](docs/specs/api-discovery/spec.md)
 - **Project Guardrails**: [`docs/guardrails.md`](docs/guardrails.md)
 - **Domain & Technical Glossary**: [`docs/glossary.md`](docs/glossary.md)
 - **Architecture Decisions**: [`docs/decisions/`](docs/decisions/)
@@ -94,4 +112,3 @@ For in-depth specifications and architectural context, consult:
   - `ADR-003`: Native Fetch & Circuit Breaker
   - `ADR-004`: grammY Telegram Framework
   - `ADR-005`: Zod Schema Validation
-- **OpenSpec Specifications**: [`openspec/specs/`](openspec/specs/)

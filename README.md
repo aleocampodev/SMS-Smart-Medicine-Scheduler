@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-1.x-green.svg)](https://playwright.dev/)
 [![GrammY](https://img.shields.io/badge/grammY-Telegram-24A1DE.svg)](https://grammy.dev/)
-[![OpenSpec](https://img.shields.io/badge/OpenSpec-Compliant-orange.svg)](openspec/)
+[![Methodology: ODD](https://img.shields.io/badge/Methodology-ODD-purple.svg)](odd/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -62,35 +62,28 @@ flowchart LR
 
 ```text
 sms-smart-medicine-scheduler/
-├── openspec/                         # Formal OpenSpec Specifications
-│   ├── config.yaml                   # Central OpenSpec project manifest
-│   └── specs/
-│       ├── guardrails/spec.md        # The 11 System Safety Guardrails
-│       ├── availability-poller/spec.md # Qanty API and 3-Rules Specification
-│       ├── telegram-notifier/spec.md # Telegram UX & Human-in-the-Loop Spec
-│       └── playwright-booker/spec.md # Fast Headless Browser Architecture
-├── src/
-│   ├── automation/
-│   │   └── playwrightBooker.ts       # Playwright runner with resource routing & traces
-│   ├── bot/
-│   │   └── telegramBot.ts            # grammY interactive bot & inline keyboard
-│   ├── config/
-│   │   ├── env.ts                    # Zod environment variable parsing
-│   │   └── profiles.ts               # Multi-person profiles loader & PII masking
-│   ├── poller/
-│   │   ├── qantyClient.ts            # Resilient HTTP client with Circuit Breaker
-│   │   └── rulesEngine.ts            # The 3 business rules engine & deduplication
-│   ├── tests/
-│   │   ├── testRules.ts              # Unit tests for the 3 rules & state cache
-│   │   └── testGuardrails.ts         # Automated tests for safety guardrails
-│   ├── types/
-│   │   └── index.ts                  # Shared TypeScript types & interfaces
-│   └── index.ts                      # Main orchestrator with jittered polling loop
+├── apps/
+│   ├── scheduler/                    # Autonomous Qanty poller, rules & Playwright booker
+│   ├── server/                       # Express + tRPC + Better-Auth backend API
+│   └── web/                          # Next.js 16 + React 19 monitoring dashboard
+├── packages/
+│   ├── api/                          # Shared tRPC routers and procedures
+│   ├── auth/                         # Better-Auth authentication layer
+│   ├── config/                       # TypeScript and tooling configurations
+│   ├── db/                           # Drizzle ORM schemas and migrations
+│   ├── poller/                       # Pure functional core for schedule evaluations
+│   └── ui/                           # Shared UI components and primitives
+├── odd/                              # Organic-Driven Development (Gentle-AI) workflow
+│   ├── README.md                     # ODD operating principles and task templates
+│   └── tasks/                        # Feature task checklists (mirrored to Engram)
+├── docs/                             # Architecture decisions, guardrails & specs
+│   ├── decisions/                    # Architecture Decision Records (ADRs)
+│   ├── specs/                        # Domain specifications (poller, notifier, booker)
+│   └── guardrails.md                 # System safety and operational guardrails
 ├── profiles.example.json             # Safe profile configuration template
 ├── .env.example                      # Environment variables template
-├── .gitignore                        # Protection against leaking PII & traces
-├── package.json
-└── tsconfig.json
+├── package.json                      # Monorepo workspace configuration
+└── turbo.json                        # Turborepo task pipeline
 ```
 
 ---
