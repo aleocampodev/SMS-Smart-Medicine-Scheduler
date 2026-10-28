@@ -1,6 +1,6 @@
-# ODD (Organic-Driven Development) — Operating Manual
+# ODD (Organic-Driven Development) — Canonical Operating Manual
 
-> **Based on Gentleman-Programming / Gentle-AI methodology (replacing legacy Spec-Driven Development / SDD).**
+> **Exact Gentle-AI v4.3+ Contract (Gentleman Programming). Replaces legacy Spec-Driven Development (SDD).**
 
 ---
 
@@ -8,77 +8,87 @@
 
 **"Keep small work small, manage substantial development dynamically."**
 
-ODD eliminates bureaucratic friction, over-engineering, and rigid upfront documentation by scaling process proportionally to task complexity and risk.
+ODD eliminates bureaucratic friction, speculative over-engineering, and rigid upfront documentation by scaling process proportionally to task complexity, risk, and user authorization.
+
+---
+
+## 2. The 7 Canonical ODD Execution Steps
 
 ```mermaid
 flowchart TD
-    A["User Request"] --> B{"Is Code Mutation Authorized?"}
-    B -- "No (Explain, Inspect, Propose)" --> C["Read-Only Exploration / Answer"]
-    B -- "Yes" --> D["Proportionate Exploration\n(Map dependencies & context)"]
-    D --> E{"Task Complexity & Sizing"}
-    E -- "Small / Fix / Direct" --> F["Direct Execution\n(Tests + Clean Diff)"]
-    E -- "Substantial / Multi-step" --> G["Create odd/tasks/<feature>.md\n+ Mirror to Engram"]
-    G --> H["TDD Loop\n(RED -> GREEN -> REFACTOR)"]
-    F --> H
-    H --> I["Work-Unit Commits\n(~400 lines max budget)"]
-    I --> J["Record Evidence & Close Tasks"]
+    A["1. Authorize\n(Is code mutation explicitly requested?)"] --> B{"Mutation Authorized?"}
+    B -- "No" --> C["Read-Only Exploration / Diagnosis / Proposal"]
+    B -- "Yes" --> D["2. Proportionate Exploration\n(Map dependencies & context before writing)"]
+    D --> E["3. Resolve Uncertainty\n(Bounded research / clarify blockers)"]
+    E --> F{"4. Classify Scope & Sizing"}
+    F -- "Small / Fix / Inline" --> G["Direct Execution\n(Tests + Clean Diff, no task doc)"]
+    F -- "Substantial / Multi-step" --> H["5. Track Before First Write\n(odd/tasks/<feature>.md + Engram mirror)"]
+    H --> I["6. Implement Task by Task\n(TDD Red->Green->Refactor & Work-Unit Commits)"]
+    G --> I
+    I --> J["7. Close\n(Verified outcome, checks ledger, next steps)"]
 ```
 
----
+### 1. Authorize
+- The agent/developer remains strictly read-only until a code mutation is explicitly requested and authorized.
+- Explanations, code investigations, and proposals never mutate files without permission.
 
-## 2. The 5 ODD Principles
+### 2. Explore Proportionately
+- Always read before write.
+- Map existing code paths, helpers, patterns, and dependencies before modifying any code.
 
-### 1. Authorization First
-- The agent/developer remains strictly read-only until a change is explicitly requested and authorized by the user.
-- Exploration must precede mutation: understand existing files, patterns, and dependencies before writing code.
+### 3. Resolve Uncertainty
+- Ask or conduct bounded targeted research only when genuine blockers or ambiguities exist. Never speculate or hedge.
 
-### 2. Keep Small Work Small
-- Bug fixes, one-line refactors, or small tasks where risk is contained do **not** require durable task files or heavy planning.
-- Small tasks are executed directly with test evidence and minimal diffs.
+### 4. Classify Sizing
+- **Small Work**: Bug fixes, single-module adjustments, or isolated tasks where state can be inferred from the request plus `git diff`. Requires **no durable task file**.
+- **Substantial Work**: Multi-step features, architectural changes, or complex integrations. Proceeds to step 5.
 
-### 3. Substantial Work Gets a Feature Task File
-- For multi-step tasks, new features, or architectural adjustments, initialize a feature tracking file at:
+### 5. Track Before the First Write
+- For substantial work, create:
   ```text
   odd/tasks/<feature-name>.md
   ```
-- Dual persistence: task lists and decisions are mirrored in **Engram** (`odd/<feature-name>/tasks`) to ensure context survives across sessions, compactions, or agent handoffs.
+  and immediately mirror the complete document to Engram under topic key:
+  ```text
+  odd/<feature-name>/tasks
+  ```
+- **Exact Document Structure (Strict Order)**:
+  1. **Header**: 2 or 3 lines naming the feature and context.
+  2. `## Specs`: Numbered specifications (`S1`, `S2`, ...) quoting the user's exact strings, errors, and examples **verbatim** (never paraphrased, never adding unrequested requirements).
+  3. `## Tasks`: Exactly one line per task formatted as:
+     `- [ ] **T1** [S1, S2]: <Task Description> | Route: <inline/worker> | Commit: <sha>`
+  4. `## Log`: Last section. `L1` is the user's original request verbatim. Subsequent entries (`L2`, `L3`...) append verbatim user corrections, decisions, and evidence.
+  - *Rule*: When a requirement changes, append a verbatim Log entry, rewrite **only** the affected `S#`, and reopen **only** its task.
 
-### 4. Test-First by Default (TDD)
-- When a deterministic outcome or test applies:
-  1. **RED**: Write and observe the failing test.
-  2. **GREEN**: Write minimal code to pass the test.
-  3. **REFACTOR**: Polish structure while keeping tests green.
+### 6. Implement Task by Task
+- **TDD by Default**: Write the failing test first (`RED`), write the minimal code to pass (`GREEN`), then `REFACTOR`.
+- **Observable Effects**: Tests must assert observable effects (exit codes, exact outputs, rejection preserving state) through the public interface.
+- **Work-Unit Commits**: Commit in focused slices of **~400 authored changed lines** on dedicated feature branches, pairing behavior with tests and documentation under Conventional Commits. High-risk items get dedicated commits.
+- **Check-off Authority**: Check a task checkbox (`[x]`) **only after** its outcome and verification checks have been observed. Update the task file and Engram mirror after each transition.
 
-### 5. Work-Unit Commits
-- Changes are sliced into clean, reviewable units (~400 changed lines budget).
-- Commits must pair implementation with corresponding tests and documentation updates.
-- Follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`).
+### 7. Close
+- Report the verified outcome, every check (passed, failed, skipped), and the next step.
+- Verify through diff analysis that unmentioned shared code has not regressed.
+- Pull request creation and merges remain the user's authority.
 
 ---
 
-## 3. Feature Task Template (`odd/tasks/<feature-name>.md`)
+## 3. Canonical Task Template (`odd/tasks/<feature-name>.md`)
 
 ```markdown
-# Task: <Feature or Enhancement Name>
+# Feature: <feature-name>
+Tracking document for <feature-name>.
+Engram Mirror: odd/<feature-name>/tasks
 
-## 1. Verbatim Request & Scope
-> <Quote the exact user prompt or requirement here>
+## Specs
+- **S1**: "<Quote user's exact requirement or input verbatim>"
+- **S2**: "<Quote expected behavior, boundaries, or constraints verbatim>"
 
-- **Scope boundaries**: What is included and what is explicitly excluded.
+## Tasks
+- [ ] **T1** [S1]: Setup test harness and capture RED test state | Route: inline | Commit: -
+- [ ] **T2** [S1, S2]: Implement core functionality and verify GREEN state | Route: inline | Commit: -
+- [ ] **T3** [S2]: Refactor, document, and verify complete test suite | Route: inline | Commit: -
 
-## 2. Design & Assumptions
-- Architectural decisions, schemas, or conventions to follow.
-- Affected packages, services, or endpoints.
-
-## 3. Tasks & Checklist
-- [ ] **Task 1: Exploration & Test Setup**
-  - [ ] Write failing test for <behavior>
-- [ ] **Task 2: Core Implementation**
-  - [ ] Implement <service/component>
-- [ ] **Task 3: Verification & Polish**
-  - [ ] Ensure 100% tests pass and typechecks are clean
-  - [ ] Record execution evidence
-
-## 4. Evidence & Artifacts
-- Test run results, terminal outputs, or screenshots.
+## Log
+- **L1**: "<User's original prompt verbatim>"
 ```
