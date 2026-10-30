@@ -13,11 +13,11 @@ Engram Mirror: odd/profiles-appointments-crud/tasks
 
 ## Tasks
 
-- [x] **T1** [S1, S2]: Add PGlite test harness and capture RED tests for profile/appointment CRUD | Route: inline | Commit: -
-- [x] **T2** [S1]: Implement profile router (list/create/update/delete) scoped to session user | Route: inline | Commit: -
-- [x] **T3** [S1]: Implement appointment router (list/create/updateStatus) scoped through profile ownership | Route: inline | Commit: -
-- [x] **T4** [S1, S2]: Wire routers into appRouter, add `@SMS/api` test script, update root test pipeline | Route: inline | Commit: -
-- [x] **T5** [S2, S3]: Add PII masking helper coverage and verify full quality gate | Route: inline | Commit: -
+- [x] **T1** [S1, S2]: Add PGlite test harness and capture RED tests for profile/appointment CRUD | Route: inline | Commit: b85b144
+- [x] **T2** [S1]: Implement profile router (list/create/update/delete) scoped to session user | Route: inline | Commit: b85b144
+- [x] **T3** [S1]: Implement appointment router (list/create/updateStatus) scoped through profile ownership | Route: inline | Commit: b85b144
+- [x] **T4** [S1, S2]: Wire routers into appRouter, add `@SMS/api` test script, update root test pipeline | Route: inline | Commit: b85b144
+- [x] **T5** [S2, S3]: Add PII masking helper coverage and verify full quality gate | Route: inline | Commit: b85b144
 
 ## Log
 
