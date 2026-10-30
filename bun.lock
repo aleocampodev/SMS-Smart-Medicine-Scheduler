@@ -100,10 +100,12 @@
         "@SMS/poller": "workspace:*",
         "@trpc/client": "catalog:",
         "@trpc/server": "catalog:",
+        "drizzle-orm": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@SMS/config": "workspace:*",
+        "@electric-sql/pglite": "^0.5.13",
         "typescript": "catalog:",
       },
     },
@@ -144,6 +146,10 @@
     "packages/poller": {
       "name": "@SMS/poller",
       "version": "1.0.0",
+      "devDependencies": {
+        "@SMS/config": "workspace:*",
+        "typescript": "catalog:",
+      },
       "peerDependencies": {
         "zod": "^4.6.4",
       },
@@ -300,6 +306,8 @@
     "@dotenvx/primitives": ["@dotenvx/primitives@0.8.0", "", {}, "sha512-VYJy0uhFm9zTJ1TxBaW/pA8bjbOM/OttaNMwZ1RHG4JKyRG7DhSdiqD1ipQoAyoD22olUtxbP78W9xY3Wd11bg=="],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.12.1", "", {}, "sha512-yHwomvolVafvUXhy5TdiJVkuNCxXn+bKOs2aWiWEQh/5YaV97Oa/abJz3dmx7lxgIUsUlS1Jl4mEfvJPo3YsVw=="],
+
+    "@electric-sql/pglite": ["@electric-sql/pglite@0.5.13", "", {}, "sha512-4rZuxK1k07w6sSpJzjMri0B9+HuXuC7V9pxVB51pR0T9KPqXg6TD0mdaEwBA9rkcL4jdht4tGDf/wYzAiGhT7g=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 

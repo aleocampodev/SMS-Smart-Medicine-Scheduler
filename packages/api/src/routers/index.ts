@@ -1,6 +1,9 @@
 import { protectedProcedure, publicProcedure, router } from "../index.js";
 import { BRANCH_MAP, tomorrowLocalDay } from "@SMS/poller";
 
+import { appointmentsRouter } from "./appointments.js";
+import { profilesRouter } from "./profiles.js";
+
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
     return {
@@ -21,6 +24,8 @@ export const appRouter = router({
       timezone: "America/Bogota",
     };
   }),
+  profiles: profilesRouter,
+  appointments: appointmentsRouter,
   privateData: protectedProcedure.query(({ ctx }) => {
     return {
       message: "This is private",
