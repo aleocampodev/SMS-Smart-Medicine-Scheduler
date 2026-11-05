@@ -6,7 +6,8 @@
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun run src/tests/testProfilesAppointments.ts"
   },
   "dependencies": {
     "@SMS/auth": "workspace:*",
@@ -14,10 +15,12 @@
     "@SMS/poller": "workspace:*",
     "@trpc/client": "catalog:",
     "@trpc/server": "catalog:",
+    "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@SMS/config": "workspace:*",
+    "@electric-sql/pglite": "^0.5.13",
     "typescript": "catalog:"
   }
 }
