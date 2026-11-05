@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@SMS/config": "workspace:*",
-    "@electric-sql/pglite": "^0.5.13",
+    "@electric-sql/pglite": "catalog:",
     "typescript": "catalog:"
   }
 }
