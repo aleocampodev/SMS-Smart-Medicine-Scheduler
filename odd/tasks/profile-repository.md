@@ -13,10 +13,10 @@ Engram Mirror: odd/profile-repository/tasks
 
 ## Tasks
 
-- [x] **T1** [S4]: Move `maskDocumentNumber` into `@SMS/poller` with unit coverage | Route: inline | Commit: -
-- [x] **T2** [S1, S2]: Add `@SMS/db` profile repository (`listAll`, `listByUser`, `getById`) with PGlite integration tests | Route: inline | Commit: -
-- [x] **T3** [S4]: Re-export the shared mask from `@SMS/api` and `@SMS/scheduler`, deleting both duplicates | Route: inline | Commit: -
-- [x] **T4** [S1, S3]: Wire the `@SMS/db` test script into the turbo pipeline and verify the full quality gate | Route: inline | Commit: -
+- [x] **T1** [S4]: Move `maskDocumentNumber` into `@SMS/poller` with unit coverage | Route: inline | Commit: aa2c634
+- [x] **T2** [S1, S2]: Add `@SMS/db` profile repository (`listAll`, `listByUser`, `getById`) with PGlite integration tests | Route: inline | Commit: aa2c634
+- [x] **T3** [S4]: Re-export the shared mask from `@SMS/api` and `@SMS/scheduler`, deleting both duplicates | Route: inline | Commit: aa2c634
+- [x] **T4** [S1, S3]: Wire the `@SMS/db` test script into the turbo pipeline and verify the full quality gate | Route: inline | Commit: aa2c634
 
 ## Log
 
