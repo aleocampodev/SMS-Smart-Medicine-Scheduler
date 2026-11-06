@@ -21,8 +21,10 @@
       "name": "@SMS/scheduler",
       "version": "1.0.0",
       "dependencies": {
+        "@SMS/db": "workspace:*",
         "@SMS/poller": "workspace:*",
         "dotenv": "^17.4.2",
+        "drizzle-orm": "catalog:",
         "grammy": "^1.46.0",
         "playwright": "^1.63.0",
         "zod": "catalog:",

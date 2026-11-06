@@ -1,5 +1,5 @@
 import { env } from "./config/env.js";
-import { loadProfiles, maskDocument } from "./config/profiles.js";
+import { createProfileSource, maskDocument } from "./config/profiles.js";
 import { QantyClient } from "./poller/qantyClient.js";
 import { RulesEngine } from "./poller/rulesEngine.js";
 import { AdaptiveScheduler } from "./poller/adaptiveScheduler.js";
@@ -10,15 +10,16 @@ async function main() {
   console.log("💊 SMS - Smart Medicine Scheduler Starting...");
   console.log("====================================================");
 
-  const profiles = loadProfiles();
-  console.log(`[Config] Loaded profiles: ${profiles.length}`);
+  const profileSource = createProfileSource();
+  const profiles = await profileSource.list();
+  console.log(`[Config] Loaded profiles from ${env.PROFILES_SOURCE} source: ${profiles.length}`);
   profiles.forEach((p) =>
     console.log(`  - ${p.displayName} (${p.documentType} ${maskDocument(p.documentNumber)})`),
   );
 
   const qantyClient = new QantyClient();
   const rulesEngine = new RulesEngine();
-  const botService = new TelegramBotService();
+  const botService = new TelegramBotService(profileSource);
 
   // Start Telegram bot listener
   await botService.start();
@@ -48,7 +49,8 @@ async function main() {
               `[Poller:Branch ${branchId}] 🚨 Found ${newSlots.length} new available slots to notify!`,
             );
             for (const slot of newSlots) {
-              await botService.sendAvailabilityAlert(slot, profiles);
+              const currentProfiles = await profileSource.list();
+              await botService.sendAvailabilityAlert(slot, currentProfiles);
             }
           } else {
             console.log(

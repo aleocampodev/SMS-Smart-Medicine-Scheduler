@@ -1,7 +1,7 @@
 import { RulesEngine } from "../poller/rulesEngine.js";
-import { loadProfiles } from "../config/profiles.js";
+import { createJsonProfileSource } from "../config/jsonProfileSource.js";
 
-function runTests() {
+async function runTests() {
   console.log("🧪 Running RulesEngine unit tests...\n");
   const engine = new RulesEngine();
 
@@ -55,11 +55,14 @@ function runTests() {
 
   // Test 6: Profiles loading and validation
   console.log("\nTest 6: User profiles loading");
-  const profiles = loadProfiles();
+  const profiles = await createJsonProfileSource().list();
   console.assert(profiles.length > 0, "Expected at least 1 profile in profiles.example.json");
   console.log(`✅ Test 6 passed: ${profiles.length} profiles loaded and validated with Zod.`);
 
   console.log("\n🎉 ALL RULES ENGINE TESTS PASSED SUCCESSFULLY!");
 }
 
-runTests();
+runTests().catch((error) => {
+  console.error("❌ Rules test failed:", error);
+  process.exit(1);
+});
