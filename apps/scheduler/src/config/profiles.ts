@@ -1,40 +1,33 @@
-import fs from "fs";
-import path from "path";
-import { Profile, ProfileSchema } from "../types/index.js";
-import { z } from "zod";
-
-const ProfilesArraySchema = z.array(ProfileSchema);
-
-export function loadProfiles(): Profile[] {
-  const customProfilesPath = path.resolve(process.cwd(), "profiles.json");
-  const exampleProfilesPath = path.resolve(process.cwd(), "profiles.example.json");
-
-  const filePathToRead = fs.existsSync(customProfilesPath)
-    ? customProfilesPath
-    : exampleProfilesPath;
-
-  if (!fs.existsSync(filePathToRead)) {
-    console.warn(`[Profiles] Warning: Neither profiles.json nor profiles.example.json was found.`);
-    return [];
-  }
-
-  try {
-    const fileContent = fs.readFileSync(filePathToRead, "utf-8");
-    const parsedJson = JSON.parse(fileContent);
-    return ProfilesArraySchema.parse(parsedJson);
-  } catch (error) {
-    console.error(`[Profiles] Error parsing profiles from ${filePathToRead}:`, error);
-    return [];
-  }
-}
-
-export function getProfileById(id: string): Profile | undefined {
-  const profiles = loadProfiles();
-  return profiles.find((p) => p.id === id);
-}
+import { env } from "./env.js";
+import { createDbProfileSource } from "./dbProfileSource.js";
+import { createJsonProfileSource } from "./jsonProfileSource.js";
+import type { ProfileSource } from "./profileSource.js";
 
 /**
  * Masks sensitive national document IDs for logs and public interfaces (P-SEC-02)
  * Example: 1234567890 -> ******7890
  */
 export { maskDocumentNumber as maskDocument } from "@SMS/poller";
+
+export type { ProfileSource };
+
+type ProfileSourceConfig = {
+  PROFILES_SOURCE: "json" | "db";
+  DATABASE_URL?: string | undefined;
+};
+
+/**
+ * Selects exactly one profile source. There is no silent fallback: if `db` is
+ * requested without a database URL, startup fails loudly instead of serving
+ * stale file data.
+ */
+export function createProfileSource(config: ProfileSourceConfig = env): ProfileSource {
+  if (config.PROFILES_SOURCE === "db") {
+    if (!config.DATABASE_URL) {
+      throw new Error("[Profiles] PROFILES_SOURCE=db requires DATABASE_URL to be configured.");
+    }
+    return createDbProfileSource(config.DATABASE_URL);
+  }
+
+  return createJsonProfileSource();
+}
