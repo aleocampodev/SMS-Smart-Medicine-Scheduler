@@ -13,11 +13,11 @@ Engram Mirror: odd/db-backed-profiles/tasks
 
 ## Tasks
 
-- [x] **T1** [S1]: Introduce `ProfileSource` and move the current loader into `JsonProfileSource` without behavior changes | Route: inline | Commit: -
-- [x] **T2** [S1, S2]: Add `DbProfileSource` and the source factory, plus `DATABASE_URL` / `PROFILES_SOURCE` / `PROFILES_OWNER_EMAIL` env | Route: inline | Commit: -
-- [x] **T3** [S1]: Refactor `index.ts` and every Telegram handler to `await` the injected source | Route: inline | Commit: -
-- [x] **T4** [S2, S4]: Add `seedProfiles` (profiles.json → Postgres, idempotent upsert, masked logs) and document the env | Route: inline | Commit: -
-- [x] **T5** [S1, S3]: Cover the source contract with tests and verify the full quality gate | Route: inline | Commit: -
+- [x] **T1** [S1]: Introduce `ProfileSource` and move the current loader into `JsonProfileSource` without behavior changes | Route: inline | Commit: 814686d
+- [x] **T2** [S1, S2]: Add `DbProfileSource` and the source factory, plus `DATABASE_URL` / `PROFILES_SOURCE` / `PROFILES_OWNER_EMAIL` env | Route: inline | Commit: 814686d
+- [x] **T3** [S1]: Refactor `index.ts` and every Telegram handler to `await` the injected source | Route: inline | Commit: 814686d
+- [x] **T4** [S2, S4]: Add `seedProfiles` (profiles.json → Postgres, idempotent upsert, masked logs) and document the env | Route: inline | Commit: 814686d
+- [x] **T5** [S1, S3]: Cover the source contract with tests and verify the full quality gate | Route: inline | Commit: 814686d
 
 ## Log
 
