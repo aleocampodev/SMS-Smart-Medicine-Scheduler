@@ -13,7 +13,8 @@
     "./events.js": "./src/events.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun run src/tests/testSanitize.ts"
   },
   "devDependencies": {
     "@SMS/config": "workspace:*",
