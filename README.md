@@ -125,6 +125,9 @@ Key configuration fields:
 - `TELEGRAM_CHAT_ID`: Your personal or group chat ID (find it using [@userinfobot](https://t.me/userinfobot)).
 - `POLL_INTERVAL_SECONDS`: Base interval in seconds between checks (default: `45`).
 - `PLAYWRIGHT_HEADLESS`: Set to `true` for headless background runs, or `false` to view the browser window during testing.
+- `PROFILES_SOURCE`: `json` (default) reads `profiles.json`; `db` reads Postgres and requires `DATABASE_URL`.
+- `DATABASE_URL`: Postgres connection string, required when `PROFILES_SOURCE=db` and for seeding.
+- `PROFILES_OWNER_EMAIL`: Better-Auth account that owns every seeded profile (single-installation mode).
 
 ### 4. Configure User Profiles
 
@@ -154,6 +157,16 @@ Edit `profiles.json` with the details of each family member who needs appointmen
 
 > [!NOTE]
 > `profiles.json` is strictly ignored by Git to guarantee personal health and identity data privacy (`G-SEC-01`).
+
+### Migrating profiles to Postgres
+
+To switch the scheduler from the file to the database:
+
+```bash
+PROFILES_SOURCE=db bun run seed:profiles
+```
+
+This upserts every entry from `profiles.json` into the `profile` table under `PROFILES_OWNER_EMAIL`, using the profile `id` as the conflict target. Logs mask national IDs. Set `PROFILES_SOURCE=db` permanently once the seeded rows match your dashboard.
 
 ---
 

@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 
-import type { Database } from "../index";
-import { profile } from "../schema/profiles";
+import type { Database } from "../index.js";
+import { profile } from "../schema/profiles.js";
 
 export type ProfileRecord = typeof profile.$inferSelect;
 

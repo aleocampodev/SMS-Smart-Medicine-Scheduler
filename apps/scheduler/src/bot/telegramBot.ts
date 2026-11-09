@@ -1,6 +1,7 @@
 import { Bot, InlineKeyboard, InputFile } from "grammy";
 import { env } from "../config/env.js";
-import { loadProfiles, getProfileById } from "../config/profiles.js";
+import { maskDocument } from "../config/profiles.js";
+import type { ProfileSource } from "../config/profileSource.js";
 import { PlaywrightBooker } from "../automation/playwrightBooker.js";
 import { QantySlot, Profile } from "../types/index.js";
 import fs from "fs";
@@ -13,7 +14,7 @@ export class TelegramBotService {
   // Set of actively subscribed chat IDs (e.g. from /start interaction)
   private subscribedChatIds: Set<string | number> = new Set();
 
-  constructor() {
+  constructor(private readonly profileSource: ProfileSource) {
     this.booker = new PlaywrightBooker();
 
     if (
@@ -55,7 +56,7 @@ export class TelegramBotService {
       );
 
       // Immediately send a test alert so the user can verify buttons
-      const profiles = loadProfiles();
+      const profiles = await this.profileSource.list();
       const localNow = new Date();
       const tomorrow = new Date(
         localNow.getFullYear(),
@@ -83,7 +84,7 @@ export class TelegramBotService {
     // Command /test: dispatch immediate interactive alert
     this.bot.command("test", async (ctx) => {
       this.subscribedChatIds.add(ctx.chat.id);
-      const profiles = loadProfiles();
+      const profiles = await this.profileSource.list();
       const localNow = new Date();
       const tomorrow = new Date(
         localNow.getFullYear(),
@@ -124,7 +125,7 @@ export class TelegramBotService {
         const { RulesEngine } = await import("../poller/rulesEngine.js");
         const client = new QantyClient();
         const rules = new RulesEngine();
-        const profiles = loadProfiles();
+        const profiles = await this.profileSource.list();
 
         let totalFound = 0;
         for (const branchId of env.TARGET_BRANCH_IDS) {
@@ -159,16 +160,15 @@ export class TelegramBotService {
 
     // Command /profiles (with PII masking G-SEC-02)
     this.bot.command("profiles", async (ctx) => {
-      const profiles = loadProfiles();
+      const profiles = await this.profileSource.list();
       if (profiles.length === 0) {
-        await ctx.reply("⚠️ No se encontraron perfiles cargados en `profiles.json`.");
+        await ctx.reply("⚠️ No hay perfiles configurados para agendamiento.");
         return;
       }
 
       const list = profiles
         .map(
-          (p) =>
-            `• *${p.displayName}* (${p.documentType} \`${p.documentNumber.slice(-4).padStart(p.documentNumber.length, "*")}\`)`,
+          (p) => `• *${p.displayName}* (${p.documentType} \`${maskDocument(p.documentNumber)}\`)`,
         )
         .join("\n");
 
@@ -195,7 +195,7 @@ export class TelegramBotService {
         const profileId = parts[2];
 
         const slot = this.activeSlots.get(slotKey);
-        const profile = getProfileById(profileId);
+        const profile = await this.profileSource.getById(profileId);
 
         if (!profile) {
           await ctx.answerCallbackQuery({ text: "Error: Perfil no encontrado." });

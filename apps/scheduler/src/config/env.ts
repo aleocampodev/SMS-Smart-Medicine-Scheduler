@@ -36,6 +36,9 @@ const EnvSchema = z.object({
             .filter(Boolean)
         : ["6035", "118"],
     ),
+  PROFILES_SOURCE: z.enum(["json", "db"]).default("json"),
+  DATABASE_URL: z.string().min(1).optional(),
+  PROFILES_OWNER_EMAIL: z.string().email().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);
