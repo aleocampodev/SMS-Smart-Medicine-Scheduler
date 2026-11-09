@@ -3,6 +3,11 @@ import { env } from "../config/env.js";
 import { loadProfiles, getProfileById } from "../config/profiles.js";
 import { PlaywrightBooker } from "../automation/playwrightBooker.js";
 import { QantySlot, Profile } from "../types/index.js";
+import {
+  buildAllowedChatIds,
+  isAllowedTelegramId,
+  isAuthorizedTelegramContext,
+} from "./allowlist.js";
 import fs from "fs";
 
 export class TelegramBotService {
@@ -12,9 +17,19 @@ export class TelegramBotService {
   private activeSlots: Map<string, QantySlot> = new Map();
   // Set of actively subscribed chat IDs (e.g. from /start interaction)
   private subscribedChatIds: Set<string | number> = new Set();
+  // Explicit access list: TELEGRAM_ALLOWED_CHAT_IDS plus TELEGRAM_CHAT_ID
+  private allowedChatIds: Set<string> = new Set();
 
   constructor() {
     this.booker = new PlaywrightBooker();
+    this.allowedChatIds = buildAllowedChatIds(env.TELEGRAM_ALLOWED_CHAT_IDS, env.TELEGRAM_CHAT_ID);
+
+    if (this.allowedChatIds.size === 0) {
+      console.warn(
+        "[TelegramBot] No allowed Telegram IDs configured. All commands and alerts will be rejected. " +
+          "Set TELEGRAM_CHAT_ID or TELEGRAM_ALLOWED_CHAT_IDS.",
+      );
+    }
 
     if (
       !env.TELEGRAM_BOT_TOKEN ||
@@ -29,10 +44,46 @@ export class TelegramBotService {
 
     this.bot = new Bot(env.TELEGRAM_BOT_TOKEN);
     this.setupHandlers();
+    console.log(
+      `[TelegramBot] Allowlist loaded with ${this.allowedChatIds.size} authorized ID(s).`,
+    );
   }
 
   private setupHandlers(): void {
     if (!this.bot) return;
+
+    // Access control: this runs before every command and callback query.
+    this.bot.use(async (ctx, next) => {
+      const allowed = isAuthorizedTelegramContext(ctx, this.allowedChatIds);
+
+      if (allowed) {
+        await next();
+        return;
+      }
+
+      if (ctx.callbackQuery) {
+        await ctx
+          .answerCallbackQuery({
+            text: "⛔ No autorizado.",
+            show_alert: true,
+          })
+          .catch(() => {});
+        return;
+      }
+
+      if (ctx.chat) {
+        if (ctx.message?.text?.startsWith("/start")) {
+          const chatId = ctx.chat.id ?? ctx.from?.id ?? "desconocido";
+          await ctx.reply(
+            `⛔ No autorizado.\n\nTu chat ID es \`${chatId}\`.\n` +
+              "Pídele al administrador que lo agregue a TELEGRAM_ALLOWED_CHAT_IDS.",
+            { parse_mode: "Markdown" },
+          );
+        } else {
+          await ctx.reply("⛔ No autorizado.");
+        }
+      }
+    });
 
     // Command /start
     this.bot.command("start", async (ctx) => {
@@ -265,11 +316,15 @@ export class TelegramBotService {
       return;
     }
     console.log("[TelegramBot] Starting Telegram bot...");
-    this.bot.start({
-      onStart: (info) => {
-        console.log(`[TelegramBot] Bot connected as @${info.username}`);
-      },
-    });
+    this.bot
+      .start({
+        onStart: (info) => {
+          console.log(`[TelegramBot] Bot connected as @${info.username}`);
+        },
+      })
+      .catch((error) => {
+        console.error("[TelegramBot] Failed to start long polling:", error);
+      });
   }
 
   /**
@@ -298,18 +353,14 @@ export class TelegramBotService {
     keyboard.text("❌ Descartar", `dismiss:${slotKey}`);
 
     const recipients: (string | number)[] = [];
-    if (
-      env.TELEGRAM_CHAT_ID &&
-      env.TELEGRAM_CHAT_ID !== "mock_chat_id" &&
-      env.TELEGRAM_CHAT_ID.trim() !== ""
-    ) {
-      recipients.push(env.TELEGRAM_CHAT_ID);
-    }
-    for (const chatId of this.subscribedChatIds) {
-      if (!recipients.includes(chatId)) {
-        recipients.push(chatId);
-      }
-    }
+    const addRecipient = (chatId: string | number | undefined) => {
+      if (chatId === undefined) return;
+      if (!isAllowedTelegramId(chatId, this.allowedChatIds)) return;
+      if (!recipients.includes(chatId)) recipients.push(chatId);
+    };
+
+    addRecipient(env.TELEGRAM_CHAT_ID);
+    for (const chatId of this.subscribedChatIds) addRecipient(chatId);
 
     if (this.bot && recipients.length > 0) {
       for (const chatId of recipients) {
@@ -324,6 +375,11 @@ export class TelegramBotService {
         }
       }
     } else {
+      if (this.bot) {
+        console.warn(
+          "[TelegramBot] No allowed recipients available. Alert was not sent to Telegram.",
+        );
+      }
       console.log(
         `[TelegramBot Mock Alert]\n${message}\nButtons: ${profiles.map((p) => p.displayName).join(", ")}`,
       );

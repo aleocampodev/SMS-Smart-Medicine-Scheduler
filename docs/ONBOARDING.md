@@ -211,7 +211,7 @@ tRPC is not a database or a server. It is the typed contract between the dashboa
 ## 8. What not to assume
 
 - The booker does not confirm a booking today.
-- The Telegram bot has no chat allowlist; any chat that sends `/start` is added to recipients.
+- The Telegram bot enforces an allowlist: only `TELEGRAM_ALLOWED_CHAT_IDS` (plus `TELEGRAM_CHAT_ID`) can run commands, receive alerts, or book.
 - Deduplication, the circuit breaker, the session cache, and active slots live in memory.
 - The scheduler does not write appointments to Postgres.
 - The dashboard is a scaffold; it does not list profiles or appointments yet.
