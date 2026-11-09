@@ -26,3 +26,4 @@ Engram Mirror: odd/telegram-allowlist/tasks
 - **L2**: "no veo donde estas usando el bot de telegram, sabiendo que ya he creado uno en botfather con telegram, no comprendo por que usaste gammY" — evidence: root `.env` contains `TELEGRAM_BOT_TOKEN`, but `apps/scheduler/.env` does not exist; `dotenv.config()` runs with the scheduler package as cwd and falls back to `mock_token`.
 - **L3**: "que es un allowlist?" — user asked for the concept; the implementation restricts bot access to an explicit ID list.
 - **L4**: Evidence (2026-11-09): `bun run test:allowlist` → 7/7 checks passed; `bun run test` → 4/4 turbo tasks OK; `bun run check-types` → 8/8 OK; `bun run build` → 3/3 OK; env probe from `apps/scheduler` printed `TOKEN=LOADED`.
+- **L5**: PR #26 opened (https://github.com/aleocampodev/SMS-Smart-Medicine-Scheduler/pull/26); CI Build & Quality Gate passed in 50s.
