@@ -13,12 +13,12 @@ Engram Mirror: odd/telegram-allowlist/tasks
 
 ## Tasks
 
-- [x] **T1** [S1, S2]: Load local and repository-root `.env` files for the scheduler, with local precedence | Route: inline | Commit: -
-- [x] **T2** [S1, S3]: Add pure allowlist parsing/validation helpers and unit tests (RED first) | Route: inline | Commit: -
-- [x] **T3** [S1, S3]: Enforce the allowlist in Telegram middleware, callback queries, and alert recipients | Route: inline | Commit: -
-- [x] **T4** [S1, S3]: Add `TELEGRAM_ALLOWED_CHAT_IDS` to the env schema and both env examples | Route: inline | Commit: -
-- [x] **T5** [S1, S3]: Wire `test:allowlist` into scheduler/root scripts and verify the full quality gate | Route: inline | Commit: -
-- [x] **T6** [S1, S3]: Update guardrails and onboarding documentation | Route: inline | Commit: -
+- [x] **T1** [S1, S2]: Load local and repository-root `.env` files for the scheduler, with local precedence | Route: inline | Commit: 024c8a7
+- [x] **T2** [S1, S3]: Add pure allowlist parsing/validation helpers and unit tests (RED first) | Route: inline | Commit: 024c8a7
+- [x] **T3** [S1, S3]: Enforce the allowlist in Telegram middleware, callback queries, and alert recipients | Route: inline | Commit: 024c8a7
+- [x] **T4** [S1, S3]: Add `TELEGRAM_ALLOWED_CHAT_IDS` to the env schema and both env examples | Route: inline | Commit: 024c8a7
+- [x] **T5** [S1, S3]: Wire `test:allowlist` into scheduler/root scripts and verify the full quality gate | Route: inline | Commit: 024c8a7
+- [x] **T6** [S1, S3]: Update guardrails and onboarding documentation | Route: inline | Commit: 024c8a7
 
 ## Log
 
