@@ -24,6 +24,7 @@ This document establishes the **core project guardrails** for the Smart Medicine
 | **`P-SEC-01`** | **No PII in Git**        | `CRITICAL` | `.gitignore` & Pre-commit | Real family identity documents, names, emails, and phone numbers in `profiles.json` must **NEVER** be committed to Git. Only `profiles.example.json` with fake data is tracked. |
 | **`P-SEC-02`** | **PII Data Masking**     | `HIGH`     | `maskDocument()` Utility  | All system logs, console outputs, and Telegram notifications that display national ID numbers must mask leading digits (e.g. `******7890`).                                     |
 | **`P-SEC-03`** | **Credential Isolation** | `CRITICAL` | `src/config/env.ts`       | Bot tokens, company codes, and chat IDs must strictly be loaded from `.env`. No secrets may be hardcoded in application source code.                                            |
+| **`P-SEC-04`** | **Telegram Allowlist**   | `CRITICAL` | `TelegramBotService`      | Only Telegram chat/user IDs listed in `TELEGRAM_ALLOWED_CHAT_IDS` (plus `TELEGRAM_CHAT_ID`) may run commands, receive alerts, or trigger bookings. Unauthorized chats are rejected and never subscribed. |
 
 ---
 

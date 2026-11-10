@@ -46,6 +46,7 @@
     "test:branches": "turbo run test:branches -F @SMS/scheduler --",
     "test:session": "turbo run test:session -F @SMS/scheduler --",
     "test:poller": "turbo run test:poller -F @SMS/scheduler --",
+    "test:allowlist": "turbo run test:allowlist -F @SMS/scheduler --",
     "inspect:api": "turbo run inspect:api -F @SMS/scheduler --",
     "list:branches": "turbo run list:branches -F @SMS/scheduler --",
     "harvest:manual": "turbo run harvest:manual -F @SMS/scheduler --",
