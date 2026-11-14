@@ -6,6 +6,17 @@ import { z } from "zod";
 const ProfilesArraySchema = z.array(ProfileSchema);
 
 export function loadProfiles(): Profile[] {
+  const envProfilesJson = process.env.PROFILES_JSON?.trim();
+  if (envProfilesJson) {
+    try {
+      const parsedJson = JSON.parse(envProfilesJson);
+      return ProfilesArraySchema.parse(parsedJson);
+    } catch (error) {
+      console.error(`[Profiles] Error parsing profiles from PROFILES_JSON env var:`, error);
+      return [];
+    }
+  }
+
   const customProfilesPath = path.resolve(process.cwd(), "profiles.json");
   const exampleProfilesPath = path.resolve(process.cwd(), "profiles.example.json");
 
