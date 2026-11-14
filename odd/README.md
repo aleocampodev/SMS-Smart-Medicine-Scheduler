@@ -29,21 +29,26 @@ flowchart TD
 ```
 
 ### 1. Authorize
+
 - The agent/developer remains strictly read-only until a code mutation is explicitly requested and authorized.
 - Explanations, code investigations, and proposals never mutate files without permission.
 
 ### 2. Explore Proportionately
+
 - Always read before write.
 - Map existing code paths, helpers, patterns, and dependencies before modifying any code.
 
 ### 3. Resolve Uncertainty
+
 - Ask or conduct bounded targeted research only when genuine blockers or ambiguities exist. Never speculate or hedge.
 
 ### 4. Classify Sizing
+
 - **Small Work**: Bug fixes, single-module adjustments, or isolated tasks where state can be inferred from the request plus `git diff`. Requires **no durable task file**.
 - **Substantial Work**: Multi-step features, architectural changes, or complex integrations. Proceeds to step 5.
 
 ### 5. Track Before the First Write
+
 - For substantial work, create:
   ```text
   odd/tasks/<feature-name>.md
@@ -58,15 +63,17 @@ flowchart TD
   3. `## Tasks`: Exactly one line per task formatted as:
      `- [ ] **T1** [S1, S2]: <Task Description> | Route: <inline/worker> | Commit: <sha>`
   4. `## Log`: Last section. `L1` is the user's original request verbatim. Subsequent entries (`L2`, `L3`...) append verbatim user corrections, decisions, and evidence.
-  - *Rule*: When a requirement changes, append a verbatim Log entry, rewrite **only** the affected `S#`, and reopen **only** its task.
+  - _Rule_: When a requirement changes, append a verbatim Log entry, rewrite **only** the affected `S#`, and reopen **only** its task.
 
 ### 6. Implement Task by Task
+
 - **TDD by Default**: Write the failing test first (`RED`), write the minimal code to pass (`GREEN`), then `REFACTOR`.
 - **Observable Effects**: Tests must assert observable effects (exit codes, exact outputs, rejection preserving state) through the public interface.
 - **Work-Unit Commits**: Commit in focused slices of **~400 authored changed lines** on dedicated feature branches, pairing behavior with tests and documentation under Conventional Commits. High-risk items get dedicated commits.
 - **Check-off Authority**: Check a task checkbox (`[x]`) **only after** its outcome and verification checks have been observed. Update the task file and Engram mirror after each transition.
 
 ### 7. Close
+
 - Report the verified outcome, every check (passed, failed, skipped), and the next step.
 - Verify through diff analysis that unmentioned shared code has not regressed.
 - Pull request creation and merges remain the user's authority.
@@ -77,18 +84,22 @@ flowchart TD
 
 ```markdown
 # Feature: <feature-name>
+
 Tracking document for <feature-name>.
 Engram Mirror: odd/<feature-name>/tasks
 
 ## Specs
+
 - **S1**: "<Quote user's exact requirement or input verbatim>"
 - **S2**: "<Quote expected behavior, boundaries, or constraints verbatim>"
 
 ## Tasks
+
 - [ ] **T1** [S1]: Setup test harness and capture RED test state | Route: inline | Commit: -
 - [ ] **T2** [S1, S2]: Implement core functionality and verify GREEN state | Route: inline | Commit: -
 - [ ] **T3** [S2]: Refactor, document, and verify complete test suite | Route: inline | Commit: -
 
 ## Log
+
 - **L1**: "<User's original prompt verbatim>"
 ```

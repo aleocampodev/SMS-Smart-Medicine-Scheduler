@@ -85,6 +85,7 @@ Every agent and human contributor must strictly adhere to the project guardrails
 ## 5. Development Workflow — Organic-Driven Development (ODD)
 
 This repository follows **ODD** (Organic-Driven Development) from Gentle-AI v4.3+:
+
 - **1. Authorization First**: Stay read-only until code mutation is explicitly authorized.
 - **2. Proportionate Exploration**: Map context, patterns, and dependencies before modifying any code.
 - **3. Resolve Uncertainty**: Bounded research for blockers; never speculate or hedge.

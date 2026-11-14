@@ -1,7 +1,14 @@
 import { Bot, InlineKeyboard, InputFile } from "grammy";
+import { resolveSelectedBranches, transitionMonitorStatus } from "@SMS/poller";
 import { env } from "../config/env.js";
 import { loadProfiles, getProfileById } from "../config/profiles.js";
 import { PlaywrightBooker } from "../automation/playwrightBooker.js";
+import {
+  InMemoryMonitorStateAdapter,
+  type BookingPort,
+  type MonitorStatePort,
+  type NotificationPort,
+} from "../ports.js";
 import { QantySlot, Profile } from "../types/index.js";
 import {
   buildAllowedChatIds,
@@ -10,9 +17,17 @@ import {
 } from "./allowlist.js";
 import fs from "fs";
 
-export class TelegramBotService {
+export interface TelegramBotDependencies {
+  statePort?: MonitorStatePort;
+  booker?: BookingPort;
+  onActivate?: () => Promise<void>;
+}
+
+export class TelegramBotService implements NotificationPort {
   private bot: Bot | null = null;
-  private booker: PlaywrightBooker;
+  private booker: BookingPort;
+  private statePort: MonitorStatePort;
+  private onActivate?: () => Promise<void>;
   // Temporary storage of active slots for button callbacks
   private activeSlots: Map<string, QantySlot> = new Map();
   // Set of actively subscribed chat IDs (e.g. from /start interaction)
@@ -20,8 +35,10 @@ export class TelegramBotService {
   // Explicit access list: TELEGRAM_ALLOWED_CHAT_IDS plus TELEGRAM_CHAT_ID
   private allowedChatIds: Set<string> = new Set();
 
-  constructor() {
-    this.booker = new PlaywrightBooker();
+  constructor(deps: TelegramBotDependencies = {}) {
+    this.booker = deps.booker || new PlaywrightBooker();
+    this.statePort = deps.statePort || new InMemoryMonitorStateAdapter();
+    this.onActivate = deps.onActivate;
     this.allowedChatIds = buildAllowedChatIds(env.TELEGRAM_ALLOWED_CHAT_IDS, env.TELEGRAM_CHAT_ID);
 
     if (this.allowedChatIds.size === 0) {
@@ -95,39 +112,43 @@ export class TelegramBotService {
         "👋 *¡Hola! Soy el bot de Smart Medicine Scheduler (SMSBot).*\n\n" +
           `✅ *¡Conexión activada con éxito!* Tu ID de chat es: \`${ctx.chat.id}\`\n\n` +
           "📍 *Sedes Monitoreadas:*\n" +
-          "• *Sede 6035:* Nueva EPS CR 46 #47 66 Local 6035 (Av. Oriental)\n" +
+          "• *Sede PISO3:* Nueva EPS Promedan CR 46 #47 66 Piso 3 (Av. Oriental)\n" +
           "• *Sede 118:* Promedan CR 49 #44 99 Local 118\n\n" +
           "⚡ *Comandos Disponibles:*\n" +
+          "• `/buscar` — Activar búsqueda automática en Qanty\n" +
+          "• `/pausar` — Pausar búsqueda (cuando ya reclamaste)\n" +
           "• `/check` — Consultar disponibilidad en vivo en este momento\n" +
           "• `/test` — Enviar una alerta de prueba con botones interactivos\n" +
-          "• `/profiles` — Ver personas configuradas para agendamiento\n\n" +
-          "Estoy monitoreando la plataforma Medic Colombia en segundo plano. Te enviaré una alerta inmediata aquí con botones de 1-clic apenas se libere un turno.",
+          "• `/profiles` — Ver personas configuradas para agendamiento",
         { parse_mode: "Markdown" },
       );
 
-      // Immediately send a test alert so the user can verify buttons
-      const profiles = loadProfiles();
-      const localNow = new Date();
-      const tomorrow = new Date(
-        localNow.getFullYear(),
-        localNow.getMonth(),
-        localNow.getDate() + 1,
-      );
-      const yyyy = tomorrow.getFullYear();
-      const mm = String(tomorrow.getMonth() + 1).padStart(2, "0");
-      const dd = String(tomorrow.getDate()).padStart(2, "0");
-      const tomorrowStr = `${yyyy}-${mm}-${dd}`;
+      await this.sendClaimCheckPrompt();
+    });
 
-      await this.sendAvailabilityAlert(
-        {
-          id: `test_6035_${tomorrowStr}_0800`,
-          date: tomorrowStr,
-          time: "08:00:00",
-          status: "free",
-          branch: "MEDELLIN – ANTIOQUIA – NUEVA EPS CR 46 #47 66 LOCAL 6035",
-          specialty: "Agendamiento (Dispensación de Medicamentos)",
-        },
-        profiles,
+    // Command /buscar: manually activate polling
+    this.bot.command("buscar", async (ctx) => {
+      this.subscribedChatIds.add(ctx.chat.id);
+      const current = await this.statePort.getStatus();
+      const next = transitionMonitorStatus(current, "RESUME");
+      await this.statePort.setStatus(next);
+      await ctx.reply(
+        "🔍 *Monitoreo activado.* Empezaré a consultar Qanty para las sedes PISO3 y 118.",
+        { parse_mode: "Markdown" },
+      );
+      if (this.onActivate) {
+        await this.onActivate();
+      }
+    });
+
+    // Command /pausar: manually pause polling
+    this.bot.command("pausar", async (ctx) => {
+      const current = await this.statePort.getStatus();
+      const next = transitionMonitorStatus(current, "PAUSE");
+      await this.statePort.setStatus(next);
+      await ctx.reply(
+        "⏸️ *Monitoreo pausado.* No haré ninguna consulta en la web hasta que uses `/buscar`.",
+        { parse_mode: "Markdown" },
       );
     });
 
@@ -232,6 +253,65 @@ export class TelegramBotService {
     this.bot.on("callback_query:data", async (ctx) => {
       const data = ctx.callbackQuery.data;
 
+      if (data === "claim:yes") {
+        const current = await this.statePort.getStatus();
+        await this.statePort.setStatus(transitionMonitorStatus(current, "CLAIM_YES"));
+        await ctx.answerCallbackQuery({ text: "Perfecto, monitoreo pausado." });
+        await ctx.editMessageText(
+          "✅ *Entendido, ya reclamaste tus medicamentos.*\n\nNo buscaré nada en la web. Si volvés a necesitar cita, enviá `/buscar`.",
+          { parse_mode: "Markdown" },
+        );
+        return;
+      }
+
+      if (data === "claim:no") {
+        const current = await this.statePort.getStatus();
+        await this.statePort.setStatus(transitionMonitorStatus(current, "CLAIM_NO"));
+        await ctx.answerCallbackQuery({ text: "Selecciona la sede..." });
+
+        const branchKeyboard = new InlineKeyboard()
+          .text("🏢 Promedan Piso 3", "branch:PISO3")
+          .row()
+          .text("🏢 Promedan Local 118", "branch:118")
+          .row()
+          .text("🔀 Ambas (PISO3 + 118)", "branch:ALL");
+
+        await ctx.editMessageText(
+          "📍 *Paso 2: ¿En cuál sede querés que busque citas?*\n\nTodavía no inicié la búsqueda web; apenas elijas una sede empiezo.",
+          {
+            parse_mode: "Markdown",
+            reply_markup: branchKeyboard,
+          },
+        );
+        return;
+      }
+
+      if (data.startsWith("branch:")) {
+        const choice = data.replace("branch:", "");
+        const selectedBranches = resolveSelectedBranches(choice, env.TARGET_BRANCH_IDS);
+        await this.statePort.setSelectedBranches(selectedBranches);
+
+        const current = await this.statePort.getStatus();
+        await this.statePort.setStatus(transitionMonitorStatus(current, "BRANCH_SELECTED"));
+
+        const label =
+          choice === "ALL"
+            ? "Promedan Piso 3 y Local 118"
+            : choice === "PISO3"
+              ? "Promedan Piso 3"
+              : `Sede ${choice}`;
+
+        await ctx.answerCallbackQuery({ text: `Buscando en ${label}...` });
+        await ctx.editMessageText(
+          `🔍 *Perfecto, empiezo a buscar citas en:* \`${label}\`.\n\nTe avisaré apenas aparezca un turno disponible.`,
+          { parse_mode: "Markdown" },
+        );
+        if (this.onActivate) {
+          await this.onActivate();
+        }
+        return;
+      }
+
       if (data.startsWith("dismiss:")) {
         await ctx.answerCallbackQuery({ text: "Alerta descartada." });
         await ctx.editMessageText("❌ *Alerta descartada por el usuario.*", {
@@ -328,14 +408,73 @@ export class TelegramBotService {
   }
 
   /**
+   * Sends the pre-search medication-claim confirmation prompt.
+   * Web polling remains idle until the user explicitly confirms they still need an appointment.
+   */
+  public async sendClaimCheckPrompt(): Promise<void> {
+    const message =
+      "💊 *Antes de buscar en la web:*\n\n" +
+      "¿Ya reclamaste tus medicamentos?\n\n" +
+      "• Si respondés *Sí*, no haré ninguna búsqueda.\n" +
+      "• Si respondés *No*, iniciaré el monitoreo automático en Qanty (PISO3 y 118).";
+
+    const keyboard = new InlineKeyboard()
+      .text("✅ Sí, ya los reclamé", "claim:yes")
+      .row()
+      .text("🔍 No, aún los necesito (buscar)", "claim:no");
+
+    const recipients = this.getAuthorizedRecipients();
+    if (this.bot && recipients.length > 0) {
+      for (const chatId of recipients) {
+        try {
+          await this.bot.api.sendMessage(chatId, message, {
+            parse_mode: "Markdown",
+            reply_markup: keyboard,
+          });
+        } catch (error: any) {
+          console.error(
+            `[TelegramBot] Failed to send claim-check prompt to chat ${chatId}:`,
+            error.message,
+          );
+        }
+      }
+    } else {
+      console.log(`[TelegramBot Mock Claim-Check Prompt]\n${message}`);
+    }
+  }
+
+  private getAuthorizedRecipients(): (string | number)[] {
+    const recipients: (string | number)[] = [];
+    const addRecipient = (chatId: string | number | undefined) => {
+      if (chatId === undefined) return;
+      if (!isAllowedTelegramId(chatId, this.allowedChatIds)) return;
+      if (!recipients.includes(chatId)) recipients.push(chatId);
+    };
+
+    addRecipient(env.TELEGRAM_CHAT_ID);
+    for (const chatId of this.subscribedChatIds) addRecipient(chatId);
+    return recipients;
+  }
+
+  /**
    * Dispatches an alert with an Inline Keyboard for each profile
    */
-  public async sendAvailabilityAlert(slot: QantySlot, profiles: Profile[]): Promise<void> {
+  public async sendAvailabilityAlert(
+    slot: QantySlot,
+    profiles: Profile[],
+    totalBranchSlots: number = 1,
+  ): Promise<void> {
     const slotKey = `${slot.date}_${slot.time || "all"}_${slot.id || Date.now()}`;
     this.activeSlots.set(slotKey, slot);
 
+    const digestLine =
+      totalBranchSlots > 1
+        ? `📊 *Turnos libres detectados en esta sede:* \`${totalBranchSlots}\` (mostrando el más próximo)\n`
+        : "";
+
     const message =
       `🚨 *¡TURNO DISPONIBLE DE MEDICAMENTOS DETECTADO!*\n\n` +
+      digestLine +
       `📅 *Fecha:* \`${slot.date}\`\n` +
       `⏰ *Hora:* \`${slot.time || "Consultar portal"}\`\n` +
       `🏢 *Sede:* ${slot.branch || "Sede Principal"}\n` +
@@ -352,15 +491,7 @@ export class TelegramBotService {
     if (profiles.length % 2 !== 0) keyboard.row();
     keyboard.text("❌ Descartar", `dismiss:${slotKey}`);
 
-    const recipients: (string | number)[] = [];
-    const addRecipient = (chatId: string | number | undefined) => {
-      if (chatId === undefined) return;
-      if (!isAllowedTelegramId(chatId, this.allowedChatIds)) return;
-      if (!recipients.includes(chatId)) recipients.push(chatId);
-    };
-
-    addRecipient(env.TELEGRAM_CHAT_ID);
-    for (const chatId of this.subscribedChatIds) addRecipient(chatId);
+    const recipients = this.getAuthorizedRecipients();
 
     if (this.bot && recipients.length > 0) {
       for (const chatId of recipients) {

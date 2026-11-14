@@ -1,9 +1,11 @@
+import { shouldPoll, summarizeBranchSlots } from "@SMS/poller";
 import { env } from "./config/env.js";
 import { loadProfiles, maskDocument } from "./config/profiles.js";
 import { QantyClient } from "./poller/qantyClient.js";
 import { RulesEngine } from "./poller/rulesEngine.js";
 import { AdaptiveScheduler } from "./poller/adaptiveScheduler.js";
 import { TelegramBotService } from "./bot/telegramBot.js";
+import { InMemoryMonitorStateAdapter } from "./ports.js";
 
 async function main() {
   console.log("====================================================");
@@ -18,22 +20,24 @@ async function main() {
 
   const qantyClient = new QantyClient();
   const rulesEngine = new RulesEngine();
-  const botService = new TelegramBotService();
-
-  // Start Telegram bot listener
-  await botService.start();
-
-  console.log(
-    `[Poller] Starting monitoring loop for branches: ${env.TARGET_BRANCH_IDS.join(", ")} (base interval: ${env.POLL_INTERVAL_SECONDS}s)...`,
-  );
+  const statePort = new InMemoryMonitorStateAdapter("AWAITING_CONFIRMATION");
 
   const pollCycle = async () => {
     try {
+      const currentStatus = await statePort.getStatus();
+      if (!shouldPoll(currentStatus)) {
+        console.log(
+          `[Poller] Skipping web search (monitor status is ${currentStatus}). Waiting for Telegram confirmation.`,
+        );
+        return;
+      }
+
+      const targetBranches = await statePort.getSelectedBranches();
       console.log(
-        `\n[Poller] [${new Date().toISOString()}] Checking appointment availability in Qanty for ${env.TARGET_BRANCH_IDS.length} target branches...`,
+        `\n[Poller] [${new Date().toISOString()}] Checking appointment availability in Qanty for ${targetBranches.length} selected branch(es): ${targetBranches.join(", ")}...`,
       );
 
-      for (const branchId of env.TARGET_BRANCH_IDS) {
+      for (const branchId of targetBranches) {
         console.log(`[Poller:Branch ${branchId}] Querying schedule...`);
         const rawData = await qantyClient.fetchDaySchedule({ branchId });
 
@@ -42,14 +46,17 @@ async function main() {
 
         if (evaluation.hasAvailability) {
           const newSlots = rulesEngine.filterUnnotifiedSlots(evaluation.matchingSlots);
+          const digest = summarizeBranchSlots(newSlots);
 
-          if (newSlots.length > 0) {
+          if (digest) {
             console.log(
-              `[Poller:Branch ${branchId}] 🚨 Found ${newSlots.length} new available slots to notify!`,
+              `[Poller:Branch ${branchId}] 🚨 Found ${digest.totalCount} new available slot(s)! Sending 1 digest alert for earliest slot.`,
             );
-            for (const slot of newSlots) {
-              await botService.sendAvailabilityAlert(slot, profiles);
-            }
+            await botService.sendAvailabilityAlert(
+              digest.earliestSlot,
+              profiles,
+              digest.totalCount,
+            );
           } else {
             console.log(
               `[Poller:Branch ${branchId}] Available slots were already notified previously.`,
@@ -61,6 +68,19 @@ async function main() {
       console.error(`[Poller] Polling cycle error:`, err.message);
     }
   };
+
+  const botService = new TelegramBotService({
+    statePort,
+    onActivate: pollCycle,
+  });
+
+  // Start Telegram bot listener and ask the user before any web search
+  await botService.start();
+  await botService.sendClaimCheckPrompt();
+
+  console.log(
+    `[Poller] Monitoring armed for branches: ${env.TARGET_BRANCH_IDS.join(", ")} (waiting for Telegram confirmation; base interval: ${env.POLL_INTERVAL_SECONDS}s)...`,
+  );
 
   const adaptiveScheduler = new AdaptiveScheduler();
 
@@ -75,8 +95,6 @@ async function main() {
     }, adaptive.intervalMs);
   };
 
-  // Run initial check immediately and schedule subsequent checks
-  await pollCycle();
   scheduleNextPoll();
 }
 
