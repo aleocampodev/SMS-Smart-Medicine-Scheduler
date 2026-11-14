@@ -19,6 +19,7 @@ export interface NotificationPort {
     profiles: Profile[],
     totalBranchSlots?: number,
   ): Promise<void>;
+  notifyBookingOutcome(result: BookingResult, profile: Profile): Promise<void>;
 }
 
 /**
@@ -40,7 +41,7 @@ export class InMemoryMonitorStateAdapter implements MonitorStatePort {
 
   constructor(
     initialStatus: MonitorStatus = "AWAITING_CONFIRMATION",
-    initialBranches: string[] = ["PISO3", "118"],
+    initialBranches: string[] = ["PISO3", "PISO6"],
   ) {
     this.status = initialStatus;
     this.selectedBranches = [...initialBranches];

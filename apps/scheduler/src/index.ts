@@ -1,4 +1,5 @@
-import { shouldPoll, summarizeBranchSlots } from "@SMS/poller";
+import { shouldPoll, summarizeBranchSlots, transitionMonitorStatus } from "@SMS/poller";
+import { PlaywrightBooker } from "./automation/playwrightBooker.js";
 import { env } from "./config/env.js";
 import { loadProfiles, maskDocument } from "./config/profiles.js";
 import { QantyClient } from "./poller/qantyClient.js";
@@ -15,12 +16,15 @@ async function main() {
   const profiles = loadProfiles();
   console.log(`[Config] Loaded profiles: ${profiles.length}`);
   profiles.forEach((p) =>
-    console.log(`  - ${p.displayName} (${p.documentType} ${maskDocument(p.documentNumber)})`),
+    console.log(
+      `  - ${p.displayName} (${p.documentType} ${maskDocument(p.documentNumber)})${p.targetBranch ? ` -> ${p.targetBranch}` : ""}`,
+    ),
   );
 
   const qantyClient = new QantyClient();
   const rulesEngine = new RulesEngine();
-  const statePort = new InMemoryMonitorStateAdapter("AWAITING_CONFIRMATION");
+  const booker = new PlaywrightBooker();
+  const statePort = new InMemoryMonitorStateAdapter("AWAITING_CONFIRMATION", env.TARGET_BRANCH_IDS);
 
   const pollCycle = async () => {
     try {
@@ -49,14 +53,31 @@ async function main() {
           const digest = summarizeBranchSlots(newSlots);
 
           if (digest) {
+            const targetProfile = profiles.find((p) => p.targetBranch === branchId) || profiles[0];
+
+            if (!targetProfile) {
+              await botService.sendAvailabilityAlert(
+                digest.earliestSlot,
+                profiles,
+                digest.totalCount,
+              );
+              continue;
+            }
+
             console.log(
-              `[Poller:Branch ${branchId}] 🚨 Found ${digest.totalCount} new available slot(s)! Sending 1 digest alert for earliest slot.`,
+              `[Poller:Branch ${branchId}] 🚀 Auto-booking earliest slot for ${targetProfile.displayName} (${digest.totalCount} total free)...`,
             );
-            await botService.sendAvailabilityAlert(
-              digest.earliestSlot,
-              profiles,
-              digest.totalCount,
-            );
+            const result = await booker.bookAppointment(digest.earliestSlot, targetProfile);
+            await botService.notifyBookingOutcome(result, targetProfile);
+
+            if (result.success) {
+              const updated = transitionMonitorStatus(await statePort.getStatus(), "PAUSE");
+              await statePort.setStatus(updated);
+              console.log(
+                `[Poller:Branch ${branchId}] ✅ Auto-booking succeeded. Monitor paused to avoid duplicate bookings.`,
+              );
+              return;
+            }
           } else {
             console.log(
               `[Poller:Branch ${branchId}] Available slots were already notified previously.`,
@@ -71,6 +92,7 @@ async function main() {
 
   const botService = new TelegramBotService({
     statePort,
+    booker,
     onActivate: pollCycle,
   });
 

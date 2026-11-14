@@ -49,7 +49,7 @@ export function transitionMonitorStatus(
  */
 export function resolveSelectedBranches(
   choice: string,
-  defaultBranches: string[] = ["PISO3", "118"],
+  defaultBranches: string[] = ["PISO3", "PISO6"],
 ): string[] {
   if (choice === "ALL") return [...defaultBranches];
   return [choice];

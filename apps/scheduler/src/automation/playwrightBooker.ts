@@ -159,11 +159,13 @@ export class PlaywrightBooker implements BookingPort {
         ['input[name*="last"]', 'input[id*="last"]', "#lastName"],
         profile.lastName,
       );
-      await this.fillFormField(
-        page,
-        ['input[type="tel"]', 'input[name*="phone"]', "#phone"],
-        profile.phone,
-      );
+      if (profile.phone) {
+        await this.fillFormField(
+          page,
+          ['input[type="tel"]', 'input[name*="phone"]', "#phone"],
+          profile.phone,
+        );
+      }
       await this.fillFormField(
         page,
         ['input[type="email"]', 'input[name*="email"]', "#email"],

@@ -65,8 +65,8 @@ function testMonitorStatusTransitions() {
     "Manual /pausar must pause polling",
   );
   assert.deepStrictEqual(resolveSelectedBranches("PISO3"), ["PISO3"]);
-  assert.deepStrictEqual(resolveSelectedBranches("118"), ["118"]);
-  assert.deepStrictEqual(resolveSelectedBranches("ALL", ["PISO3", "118"]), ["PISO3", "118"]);
+  assert.deepStrictEqual(resolveSelectedBranches("PISO6"), ["PISO6"]);
+  assert.deepStrictEqual(resolveSelectedBranches("ALL", ["PISO3", "PISO6"]), ["PISO3", "PISO6"]);
   console.log("✅ Passed: all state transitions and branch choices behave deterministically.\n");
 }
 
@@ -88,12 +88,17 @@ function testSummarizeBranchSlots() {
 }
 
 function testPiso3BranchMapping() {
-  console.log("Test 4: BRANCH_MAP includes Promedan PISO3 mapping");
+  console.log("Test 4: BRANCH_MAP includes Promedan PISO3 and PISO6 mappings");
   const piso3 = BRANCH_MAP["PISO3"];
   assert.ok(piso3, "BRANCH_MAP must include PISO3");
   assert.strictEqual(piso3.branchId, "XVoySp4iyl9hC7nNhuEN");
   assert.strictEqual(piso3.lineId, "G26hsHGJQWHLWsSUghdK");
-  console.log("✅ Passed: Promedan PISO3 branch and line IDs verified.\n");
+
+  const piso6 = BRANCH_MAP["PISO6"];
+  assert.ok(piso6, "BRANCH_MAP must include PISO6");
+  assert.strictEqual(piso6.branchId, "ZOLH5f1ydz6XQxFvpL0e");
+  assert.strictEqual(piso6.lineId, "49P4qDGm7i87QLeyjG25");
+  console.log("✅ Passed: Promedan PISO3 and PISO6 branch and line IDs verified.\n");
 }
 
 testShouldPollOnlyWhenActive();

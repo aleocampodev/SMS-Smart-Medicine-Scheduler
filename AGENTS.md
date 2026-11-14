@@ -75,9 +75,9 @@ Every agent and human contributor must strictly adhere to the project guardrails
 - Minimum polling cadence is 30 seconds with random jitter ($\pm 5\text{s}$ to $\pm 15\text{s}$).
 - Outgoing requests must halt for 10 minutes upon receiving HTTP `429` or `403` (Circuit Breaker).
 
-### 🤖 Action Safety & Human-in-the-Loop (`P-ACT-01`, `P-ACT-02`)
+### 🤖 Action Safety & Session-Authorized Booking (`P-ACT-01`, `P-ACT-02`)
 
-- The system must never book appointments autonomously without human confirmation. A user must tap a Telegram inline button.
+- The system must never poll or book appointments without prior human session authorization via Telegram (`claim:no` + branch selection). Once authorized for the active session, auto-booking is permitted for the branch's assigned profile.
 - Strictly **one** Playwright browser instance may book at any time (concurrency mutex lock).
 
 ---

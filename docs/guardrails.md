@@ -52,13 +52,13 @@ This document establishes the **core project guardrails** for the Smart Medicine
 
 ## 4. Browser Automation & Action Guardrails (`P-ACT`)
 
-| ID             | Name                            | Severity   | Enforcement Mechanism      | Policy Description                                                                                                                                                        |
-| :------------- | :------------------------------ | :--------- | :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`P-ACT-01`** | **Mandatory Human-in-the-Loop** | `CRITICAL` | Telegram Inline Buttons    | The system must **never** book appointments autonomously without explicit human authorization. Booking requires a user tapping a specific profile button in Telegram.     |
-| **`P-ACT-02`** | **Concurrency Mutex Lock**      | `HIGH`     | `isBookingInProgress` Flag | Strictly **one** Playwright browser instance may run a booking session at any time. Parallel booking requests are defensively rejected until the active session finishes. |
-| **`P-ACT-03`** | **Hard Timeout & Cleanup**      | `HIGH`     | 30s Timeout & `finally`    | All browser operations have a 30-second hard ceiling. Browser contexts and pages must be terminated in `finally` blocks to prevent zombie processes.                      |
-| **`P-ACT-04`** | **CAPTCHA Escalation**          | `HIGH`     | DOM Detector & Alert       | If an interactive Cloudflare challenge or reCAPTCHA puzzle appears, automation halts immediately, captures a screenshot, and prompts the user for manual completion.      |
-| **`P-ACT-05`** | **Proof Receipt**               | `MEDIUM`   | Screenshot Delivery        | Every booking attempt must capture a timestamped `.png` screenshot of the final page and send it to Telegram as proof of confirmation.                                    |
+| ID             | Name                           | Severity   | Enforcement Mechanism      | Policy Description                                                                                                                                                                                        |
+| :------------- | :----------------------------- | :--------- | :------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`P-ACT-01`** | **Session-Authorized Booking** | `CRITICAL` | Telegram Pre-Search Gate   | The system must **never** poll or auto-book without prior human session authorization via Telegram (`claim:no` + branch selection). Once authorized, auto-booking runs for the branch's assigned profile. |
+| **`P-ACT-02`** | **Concurrency Mutex Lock**     | `HIGH`     | `isBookingInProgress` Flag | Strictly **one** Playwright browser instance may run a booking session at any time. Parallel booking requests are defensively rejected until the active session finishes.                                 |
+| **`P-ACT-03`** | **Hard Timeout & Cleanup**     | `HIGH`     | 30s Timeout & `finally`    | All browser operations have a 30-second hard ceiling. Browser contexts and pages must be terminated in `finally` blocks to prevent zombie processes.                                                      |
+| **`P-ACT-04`** | **CAPTCHA Escalation**         | `HIGH`     | DOM Detector & Alert       | If an interactive Cloudflare challenge or reCAPTCHA puzzle appears, automation halts immediately, captures a screenshot, and prompts the user for manual completion.                                      |
+| **`P-ACT-05`** | **Proof Receipt**              | `MEDIUM`   | Screenshot Delivery        | Every booking attempt must capture a timestamped `.png` screenshot of the final page and send it to Telegram as proof of confirmation.                                                                    |
 
 ---
 

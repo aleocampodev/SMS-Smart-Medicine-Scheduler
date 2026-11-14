@@ -9,7 +9,7 @@ import {
   type MonitorStatePort,
   type NotificationPort,
 } from "../ports.js";
-import { QantySlot, Profile } from "../types/index.js";
+import { BookingResult, QantySlot, Profile } from "../types/index.js";
 import {
   buildAllowedChatIds,
   isAllowedTelegramId,
@@ -272,12 +272,12 @@ export class TelegramBotService implements NotificationPort {
         const branchKeyboard = new InlineKeyboard()
           .text("🏢 Promedan Piso 3", "branch:PISO3")
           .row()
-          .text("🏢 Promedan Local 118", "branch:118")
+          .text("🏢 Promedan Piso 6", "branch:PISO6")
           .row()
-          .text("🔀 Ambas (PISO3 + 118)", "branch:ALL");
+          .text("🔀 Ambas (PISO3 + PISO6)", "branch:ALL");
 
         await ctx.editMessageText(
-          "📍 *Paso 2: ¿En cuál sede querés que busque citas?*\n\nTodavía no inicié la búsqueda web; apenas elijas una sede empiezo.",
+          "📍 *Paso 2: ¿En cuál sede querés que busque y agende automáticamente?*\n\nTodavía no inicié la búsqueda web; apenas elijas una sede empiezo.",
           {
             parse_mode: "Markdown",
             reply_markup: branchKeyboard,
@@ -296,10 +296,12 @@ export class TelegramBotService implements NotificationPort {
 
         const label =
           choice === "ALL"
-            ? "Promedan Piso 3 y Local 118"
+            ? "Promedan Piso 3 y Piso 6"
             : choice === "PISO3"
               ? "Promedan Piso 3"
-              : `Sede ${choice}`;
+              : choice === "PISO6"
+                ? "Promedan Piso 6"
+                : `Sede ${choice}`;
 
         await ctx.answerCallbackQuery({ text: `Buscando en ${label}...` });
         await ctx.editMessageText(
@@ -405,6 +407,40 @@ export class TelegramBotService implements NotificationPort {
       .catch((error) => {
         console.error("[TelegramBot] Failed to start long polling:", error);
       });
+  }
+
+  public async notifyBookingOutcome(result: BookingResult, profile: Profile): Promise<void> {
+    const caption = result.success
+      ? `✅ *¡Cita Agendada Automáticamente!*\n\n` +
+        `👤 *Paciente:* ${profile.displayName}\n` +
+        `📅 *Fecha:* ${result.slotDate} ${result.slotTime || ""}\n` +
+        `💬 *Resultado:* ${result.message}`
+      : `❌ *Auto-agendamiento detenido para ${profile.displayName}*\n\n` +
+        `⚠️ Motivo: ${result.message}`;
+
+    const recipients = this.getAuthorizedRecipients();
+    if (!this.bot || recipients.length === 0) {
+      console.log(`[TelegramBot Mock Booking Outcome]\n${caption}`);
+      return;
+    }
+
+    for (const chatId of recipients) {
+      try {
+        if (result.screenshotPath && fs.existsSync(result.screenshotPath)) {
+          await this.bot.api.sendPhoto(chatId, new InputFile(result.screenshotPath), {
+            caption,
+            parse_mode: "Markdown",
+          });
+        } else {
+          await this.bot.api.sendMessage(chatId, caption, { parse_mode: "Markdown" });
+        }
+      } catch (error: any) {
+        console.error(
+          `[TelegramBot] Failed to send booking outcome to chat ${chatId}:`,
+          error.message,
+        );
+      }
+    }
   }
 
   /**

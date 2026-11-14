@@ -53,7 +53,7 @@ const EnvSchema = z.object({
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
-        : ["PISO3", "118"],
+        : ["PISO3", "PISO6"],
     ),
 });
 

@@ -9,15 +9,15 @@ console.log("🧪 RUNNING BRANCH CONFIGURATION & SELECTION UNIT TESTS");
 console.log("===========================================================\n");
 
 function testBranchConfigurationDefaults() {
-  console.log("Test 1: Default branch configuration contains Medellín PISO3 and 118");
+  console.log("Test 1: Default branch configuration contains Medellín PISO3 and PISO6");
   assert.strictEqual(env.TARGET_BRANCH_ID, "PISO3", "Default branch ID must be PISO3");
   assert.strictEqual(env.TARGET_BRANCH_NAME, "Medellin", "Default branch name must be Medellin");
   assert.deepStrictEqual(
     env.TARGET_BRANCH_IDS,
-    ["PISO3", "118"],
-    "Default target branch IDs array must contain both PISO3 and 118",
+    ["PISO3", "PISO6"],
+    "Default target branch IDs array must contain both PISO3 and PISO6",
   );
-  console.log("✅ Passed: Branch defaults correctly include Medellín PISO3 and 118.\n");
+  console.log("✅ Passed: Branch defaults correctly include Medellín PISO3 and PISO6.\n");
 }
 
 async function testQantyClientBranchIntegration() {
