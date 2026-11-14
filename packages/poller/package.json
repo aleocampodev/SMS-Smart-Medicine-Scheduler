@@ -10,7 +10,8 @@
     "./payload.js": "./src/payload.ts",
     "./rules.js": "./src/rules.ts",
     "./scheduler.js": "./src/scheduler.ts",
-    "./events.js": "./src/events.ts"
+    "./events.js": "./src/events.ts",
+    "./monitorGate.js": "./src/monitorGate.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

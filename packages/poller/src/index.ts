@@ -4,3 +4,4 @@ export * from "./rules.js";
 export * from "./scheduler.js";
 export * from "./events.js";
 export * from "./sanitize.js";
+export * from "./monitorGate.js";

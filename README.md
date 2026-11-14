@@ -27,10 +27,12 @@ Securing medicine pickup appointments at healthcare dispensaries and pharmacy ne
 
 ```mermaid
 flowchart LR
-    A["1. Availability Script\n(POST qanty.com API)"] --> B{"2. API Validator\n- More than 2 items\n- status == 'free'\n- date != today"}
-    B -- "Match found" --> C["3. Telegram Bot\nInteractive Alert:\n[👤 Book Alex] [👤 Book Maria]"]
-    C -- "User taps profile" --> D["4. Playwright Automator\n(Injects personal data)"]
-    D --> E["5. Confirmation Receipt\n(Screenshot to Telegram)"]
+    G{"0. Telegram Claim Gate\nAlready claimed?"} -- "Yes" --> P["Paused (0 web requests)"]
+    G -- "No (/buscar)" --> A["1. Qanty Poller\n(PISO3 + 118)"]
+    A --> B["2. @SMS/poller Pure Core\n(Rules + Branch Digest)"]
+    B -- "1 digest/branch" --> C["3. Telegram NotificationPort\n[👤 Book Profile]"]
+    C -- "User taps profile" --> D["4. Playwright BookingPort\n(Select + Fill + Submit)"]
+    D --> E["5. Confirmation Receipt\n(Screenshot + @SMS/db)"]
 ```
 
 ---
