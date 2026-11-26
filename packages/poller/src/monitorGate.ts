@@ -73,3 +73,39 @@ export function summarizeBranchSlots(slots: QantySlot[]): BranchSlotDigest | nul
     earliestSlot: sorted[0]!,
   };
 }
+
+export interface DailyPromptDecision {
+  trigger: boolean;
+  localDay: string;
+}
+
+/**
+ * Pure check for whether the daily afternoon Telegram claim-check prompt
+ * should fire once for the current local day (default: 16:00 America/Bogota).
+ */
+export function shouldTriggerDailyClaimPrompt(
+  now: Date,
+  lastPromptDay: string | null,
+  promptHour: number = 16,
+  timeZone: string = "America/Bogota",
+): DailyPromptDecision {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+
+  const localDay = `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+  const localHour = Number(getPart("hour"));
+
+  return {
+    trigger: localHour >= promptHour && lastPromptDay !== localDay,
+    localDay,
+  };
+}

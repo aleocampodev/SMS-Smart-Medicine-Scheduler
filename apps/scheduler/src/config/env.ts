@@ -55,6 +55,8 @@ const EnvSchema = z.object({
             .filter(Boolean)
         : ["PISO3", "PISO6"],
     ),
+  CLAIM_PROMPT_HOUR: z.coerce.number().int().min(0).max(23).default(16),
+  CLAIM_PROMPT_TIMEZONE: z.string().default("America/Bogota"),
 });
 
 export const env = EnvSchema.parse(process.env);

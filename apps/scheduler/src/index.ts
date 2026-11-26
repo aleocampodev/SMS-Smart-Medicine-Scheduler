@@ -1,4 +1,9 @@
-import { shouldPoll, summarizeBranchSlots, transitionMonitorStatus } from "@SMS/poller";
+import {
+  shouldPoll,
+  shouldTriggerDailyClaimPrompt,
+  summarizeBranchSlots,
+  transitionMonitorStatus,
+} from "@SMS/poller";
 import { PlaywrightBooker } from "./automation/playwrightBooker.js";
 import { env } from "./config/env.js";
 import { loadProfiles, maskDocument } from "./config/profiles.js";
@@ -100,8 +105,41 @@ async function main() {
   await botService.start();
   await botService.sendClaimCheckPrompt();
 
+  const startupPromptCheck = shouldTriggerDailyClaimPrompt(
+    new Date(),
+    null,
+    env.CLAIM_PROMPT_HOUR,
+    env.CLAIM_PROMPT_TIMEZONE,
+  );
+  let lastPromptDay: string | null = startupPromptCheck.trigger
+    ? startupPromptCheck.localDay
+    : null;
+
+  // Daily afternoon reminder (day-before check for tomorrow's Qanty slots)
+  setInterval(async () => {
+    try {
+      const check = shouldTriggerDailyClaimPrompt(
+        new Date(),
+        lastPromptDay,
+        env.CLAIM_PROMPT_HOUR,
+        env.CLAIM_PROMPT_TIMEZONE,
+      );
+      if (!check.trigger) return;
+
+      lastPromptDay = check.localDay;
+      const updated = transitionMonitorStatus(await statePort.getStatus(), "PROMPT");
+      await statePort.setStatus(updated);
+      await botService.sendClaimCheckPrompt();
+      console.log(
+        `[Scheduler:DailyPrompt] Sent afternoon claim-check prompt for ${check.localDay} (${env.CLAIM_PROMPT_HOUR}:00 ${env.CLAIM_PROMPT_TIMEZONE}).`,
+      );
+    } catch (err: any) {
+      console.error("[Scheduler:DailyPrompt] Error sending afternoon prompt:", err.message);
+    }
+  }, 60_000);
+
   console.log(
-    `[Poller] Monitoring armed for branches: ${env.TARGET_BRANCH_IDS.join(", ")} (waiting for Telegram confirmation; base interval: ${env.POLL_INTERVAL_SECONDS}s)...`,
+    `[Poller] Monitoring armed for branches: ${env.TARGET_BRANCH_IDS.join(", ")} (waiting for Telegram confirmation; daily prompt at ${env.CLAIM_PROMPT_HOUR}:00 ${env.CLAIM_PROMPT_TIMEZONE}; base interval: ${env.POLL_INTERVAL_SECONDS}s)...`,
   );
 
   const adaptiveScheduler = new AdaptiveScheduler();

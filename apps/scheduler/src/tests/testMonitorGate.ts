@@ -3,6 +3,7 @@ import {
   BRANCH_MAP,
   resolveSelectedBranches,
   shouldPoll,
+  shouldTriggerDailyClaimPrompt,
   summarizeBranchSlots,
   transitionMonitorStatus,
   type MonitorStatus,
@@ -101,9 +102,36 @@ function testPiso3BranchMapping() {
   console.log("✅ Passed: Promedan PISO3 and PISO6 branch and line IDs verified.\n");
 }
 
+function testDailyAfternoonClaimPrompt() {
+  console.log("Test 5: shouldTriggerDailyClaimPrompt fires once per day at afternoon hour");
+  // 2026-11-16T20:59:00Z is 15:59 in America/Bogota (UTC-5) -> before 16:00
+  const beforeAfternoon = new Date("2026-11-16T20:59:00Z");
+  const resBefore = shouldTriggerDailyClaimPrompt(beforeAfternoon, null, 16, "America/Bogota");
+  assert.strictEqual(resBefore.trigger, false);
+  assert.strictEqual(resBefore.localDay, "2026-11-16");
+
+  // 2026-11-16T21:00:00Z is 16:00 in America/Bogota -> triggers once
+  const atAfternoon = new Date("2026-11-16T21:00:00Z");
+  const resAt = shouldTriggerDailyClaimPrompt(atAfternoon, null, 16, "America/Bogota");
+  assert.strictEqual(resAt.trigger, true);
+  assert.strictEqual(resAt.localDay, "2026-11-16");
+
+  // Same day after already prompting -> must not re-trigger
+  const resRepeat = shouldTriggerDailyClaimPrompt(atAfternoon, "2026-11-16", 16, "America/Bogota");
+  assert.strictEqual(resRepeat.trigger, false);
+
+  // Next day at 16:05 -> triggers again
+  const nextDay = new Date("2026-11-17T21:05:00Z");
+  const resNext = shouldTriggerDailyClaimPrompt(nextDay, "2026-11-16", 16, "America/Bogota");
+  assert.strictEqual(resNext.trigger, true);
+  assert.strictEqual(resNext.localDay, "2026-11-17");
+  console.log("✅ Passed: daily afternoon claim prompt triggers once per day in local timezone.\n");
+}
+
 testShouldPollOnlyWhenActive();
 testMonitorStatusTransitions();
 testSummarizeBranchSlots();
 testPiso3BranchMapping();
+testDailyAfternoonClaimPrompt();
 
 console.log("🎉 ALL MONITOR GATE TESTS PASSED SUCCESSFULLY!");
