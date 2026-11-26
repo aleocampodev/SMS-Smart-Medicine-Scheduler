@@ -25,12 +25,21 @@ Securing medicine pickup appointments at healthcare dispensaries and pharmacy ne
 
 ## 📐 High-Level Architecture
 
+> Interactive diagram: [`.archify/architecture-sms-monorepo-20261116-195000/sms-architecture.html`](.archify/architecture-sms-monorepo-20261116-195000/sms-architecture.html)
+
 ```mermaid
 flowchart LR
-    A["1. Availability Script\n(POST qanty.com API)"] --> B{"2. API Validator\n- More than 2 items\n- status == 'free'\n- date != today"}
-    B -- "Match found" --> C["3. Telegram Bot\nInteractive Alert:\n[👤 Book Alex] [👤 Book Maria]"]
-    C -- "User taps profile" --> D["4. Playwright Automator\n(Injects personal data)"]
-    D --> E["5. Confirmation Receipt\n(Screenshot to Telegram)"]
+    U["Patient / Owner\n(Telegram & Browser)"] -- "claim:no (/buscar)" --> TG["Telegram Gate\n(grammY + allowlist)"]
+    TG -- "Yes (claim:yes)" --> P["Paused\n(0 web requests)"]
+    TG -- "ACTIVE" --> S["Scheduler Loop\n(apps/scheduler + @SMS/poller)"]
+    S -- "poll slots" --> QC["Qanty Client\n(Fetch + Circuit Breaker)"]
+    QC -- "HTTPS POST" --> QP["Qanty Portal\n(PISO3 & PISO6)"]
+    S -- "auto-book" --> PB["Playwright Booker\n(Mutex + Stealth)"]
+    PB -- "fill & submit" --> QP
+
+    U -. "HTTPS" .-> WEB["Web Dashboard\n(Next.js 16 + React 19)"]
+    WEB -- "tRPC" --> API["API Server\n(Express + Better Auth)"]
+    API -- "SQL" --> DB[("PostgreSQL\nDrizzle @SMS/db")]
 ```
 
 ---

@@ -10,6 +10,16 @@ export const BRANCH_MAP: Record<string, BranchInfo> = {
     lineId: "G26hsHGJQWHLWsSUghdK",
     name: "MEDELLÍN - ANTIOQUIA - NUEVA EPS - PROMEDAN CR 49 #44 99 LOCAL 118",
   },
+  PISO3: {
+    branchId: "XVoySp4iyl9hC7nNhuEN",
+    lineId: "G26hsHGJQWHLWsSUghdK",
+    name: "MEDELLIN – ANTIOQUIA – NUEVA EPS - PROMEDAN - CR 46 # 47 66 PISO 3",
+  },
+  PISO6: {
+    branchId: "ZOLH5f1ydz6XQxFvpL0e",
+    lineId: "49P4qDGm7i87QLeyjG25",
+    name: "MEDELLIN – ANTIOQUIA – NUEVA EPS - PROMEDAN CR 46 #47 66 PISO 6",
+  },
   "6035": {
     branchId: "ZOLH5f1ydz6XQxFvpL0e",
     lineId: "49P4qDGm7i87QLeyjG25",

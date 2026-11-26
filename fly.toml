@@ -1,0 +1,20 @@
+app = "sms-medicine-scheduler"
+primary_region = "mia"
+
+[build]
+dockerfile = "apps/scheduler/Dockerfile"
+ignorefile = ".dockerignore"
+
+[env]
+NODE_ENV = "production"
+PLAYWRIGHT_HEADLESS = "true"
+TARGET_BRANCH_ID = "PISO3"
+TARGET_BRANCH_IDS = "PISO3,PISO6"
+TARGET_BRANCH_NAME = "Medellin"
+POLL_INTERVAL_SECONDS = "45"
+BROWSER_TIMEOUT_MS = "30000"
+
+[[vm]]
+memory = "1gb"
+cpu_kind = "shared"
+cpus = 1

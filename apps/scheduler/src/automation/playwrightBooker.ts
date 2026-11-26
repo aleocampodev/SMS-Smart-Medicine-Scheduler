@@ -2,9 +2,10 @@ import { chromium, Browser, Page } from "playwright";
 import path from "path";
 import fs from "fs";
 import { env } from "../config/env.js";
+import type { BookingPort } from "../ports.js";
 import { BookingResult, Profile, QantySlot } from "../types/index.js";
 
-export class PlaywrightBooker {
+export class PlaywrightBooker implements BookingPort {
   private screenshotsDir: string;
   private tracesDir: string;
   // Guardrail G-ACT-02: Concurrency mutex to prevent parallel overlapping browser sessions
@@ -131,6 +132,17 @@ export class PlaywrightBooker {
         };
       }
 
+      // Select branch, date, and time slot when rendered in the Qanty portal
+      if (slot.branch) {
+        await this.clickMatchingText(page, slot.branch);
+      }
+      if (slot.date) {
+        await this.clickMatchingText(page, slot.date);
+      }
+      if (slot.time) {
+        await this.clickMatchingText(page, slot.time.slice(0, 5));
+      }
+
       // Fill typical appointment booking form fields with adaptive selectors
       await this.fillFormField(
         page,
@@ -147,16 +159,25 @@ export class PlaywrightBooker {
         ['input[name*="last"]', 'input[id*="last"]', "#lastName"],
         profile.lastName,
       );
-      await this.fillFormField(
-        page,
-        ['input[type="tel"]', 'input[name*="phone"]', "#phone"],
-        profile.phone,
-      );
+      if (profile.phone) {
+        await this.fillFormField(
+          page,
+          ['input[type="tel"]', 'input[name*="phone"]', "#phone"],
+          profile.phone,
+        );
+      }
       await this.fillFormField(
         page,
         ['input[type="email"]', 'input[name*="email"]', "#email"],
         profile.email,
       );
+
+      // Submit the appointment form when a submit button is present
+      await this.clickFirstVisible(page, [
+        'button[type="submit"]',
+        'button:has-text("Agendar")',
+        'button:has-text("Confirmar")',
+      ]);
 
       // Settle and capture full screenshot receipt
       await page.waitForTimeout(1000);
@@ -207,6 +228,34 @@ export class PlaywrightBooker {
         await browser.close();
       }
     }
+  }
+
+  private async clickMatchingText(page: Page, text: string): Promise<boolean> {
+    try {
+      const locator = page.getByText(text, { exact: false }).first();
+      if (await locator.isVisible()) {
+        await locator.click();
+        return true;
+      }
+    } catch {
+      // Optional portal step
+    }
+    return false;
+  }
+
+  private async clickFirstVisible(page: Page, selectors: string[]): Promise<boolean> {
+    for (const selector of selectors) {
+      try {
+        const el = page.locator(selector).first();
+        if (await el.isVisible()) {
+          await el.click();
+          return true;
+        }
+      } catch {
+        // Try next selector
+      }
+    }
+    return false;
   }
 
   /**

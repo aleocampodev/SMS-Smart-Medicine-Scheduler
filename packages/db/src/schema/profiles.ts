@@ -31,3 +31,12 @@ export const appointment = pgTable("appointment", {
   confirmationCode: text("confirmation_code"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const monitorState = pgTable("monitor_state", {
+  id: text("id").primaryKey(),
+  status: text("status").notNull().default("AWAITING_CONFIRMATION"),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});

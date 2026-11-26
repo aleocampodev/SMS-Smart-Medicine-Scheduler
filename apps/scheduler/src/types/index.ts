@@ -7,9 +7,10 @@ export const ProfileSchema = z.object({
   documentNumber: z.string(),
   firstName: z.string(),
   lastName: z.string(),
-  birthDate: z.string(), // YYYY-MM-DD
-  phone: z.string(),
+  birthDate: z.string().optional(), // YYYY-MM-DD
+  phone: z.string().optional(),
   email: z.string().email(),
+  targetBranch: z.string().optional(),
   healthEntity: z.string().optional(),
   prescriptionCode: z.string().optional(),
 });
