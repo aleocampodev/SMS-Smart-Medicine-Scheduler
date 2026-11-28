@@ -2,6 +2,7 @@ import { protectedProcedure, publicProcedure, router } from "../index.js";
 import { BRANCH_MAP, tomorrowLocalDay } from "@SMS/poller";
 
 import { appointmentsRouter } from "./appointments.js";
+import { monitorRouter } from "./monitor.js";
 import { profilesRouter } from "./profiles.js";
 
 export const appRouter = router({
@@ -26,6 +27,7 @@ export const appRouter = router({
   }),
   profiles: profilesRouter,
   appointments: appointmentsRouter,
+  monitor: monitorRouter,
   privateData: protectedProcedure.query(({ ctx }) => {
     return {
       message: "This is private",
