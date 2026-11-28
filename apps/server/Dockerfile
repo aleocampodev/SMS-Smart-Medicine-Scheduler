@@ -3,7 +3,7 @@ WORKDIR /app
 
 COPY . .
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --ignore-scripts
-RUN cd apps/server && bun run build
+RUN bun run env:generate && cd apps/server && bun run build
 
 FROM oven/bun:1-slim AS runner
 WORKDIR /app
