@@ -18,7 +18,7 @@ COPY packages/poller packages/poller
 COPY apps/scheduler apps/scheduler
 
 # Install Chromium and OS dependencies required by Playwright
-RUN cd apps/scheduler && bunx playwright install chromium --with-deps
+RUN cd apps/scheduler && bun x playwright install chromium --with-deps
 
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_HEADLESS=true
