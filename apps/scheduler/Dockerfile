@@ -6,12 +6,14 @@ WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.json turbo.json ./
 COPY apps/scheduler/package.json apps/scheduler/package.json
 COPY packages/config/package.json packages/config/package.json
+COPY packages/db/package.json packages/db/package.json
 COPY packages/poller/package.json packages/poller/package.json
 
 RUN bun install --ignore-scripts
 
 # Copy scheduler and shared pure packages
 COPY packages/config packages/config
+COPY packages/db packages/db
 COPY packages/poller packages/poller
 COPY apps/scheduler apps/scheduler
 

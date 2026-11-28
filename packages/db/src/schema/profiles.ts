@@ -35,6 +35,7 @@ export const appointment = pgTable("appointment", {
 export const monitorState = pgTable("monitor_state", {
   id: text("id").primaryKey(),
   status: text("status").notNull().default("AWAITING_CONFIRMATION"),
+  selectedBranches: text("selected_branches"),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())

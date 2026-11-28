@@ -57,6 +57,7 @@ const EnvSchema = z.object({
     ),
   CLAIM_PROMPT_HOUR: z.coerce.number().int().min(0).max(23).default(16),
   CLAIM_PROMPT_TIMEZONE: z.string().default("America/Bogota"),
+  DATABASE_URL: z.string().min(1).optional(),
 });
 
 export const env = EnvSchema.parse(process.env);

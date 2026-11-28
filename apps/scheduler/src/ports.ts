@@ -1,3 +1,4 @@
+import type { MonitorStateRepository } from "@SMS/db/repositories/monitorState";
 import type { MonitorStatus } from "@SMS/poller";
 import type { BookingResult, Profile, QantySlot } from "./types/index.js";
 
@@ -61,5 +62,34 @@ export class InMemoryMonitorStateAdapter implements MonitorStatePort {
 
   public async setSelectedBranches(branches: string[]): Promise<void> {
     this.selectedBranches = [...branches];
+  }
+}
+
+/**
+ * PostgreSQL-backed MonitorStatePort adapter using @SMS/db.
+ */
+export class PostgresMonitorStateAdapter implements MonitorStatePort {
+  private repo: MonitorStateRepository;
+  private defaultBranches: string[];
+
+  constructor(repo: MonitorStateRepository, defaultBranches: string[] = ["PISO3", "PISO6"]) {
+    this.repo = repo;
+    this.defaultBranches = [...defaultBranches];
+  }
+
+  public async getStatus(): Promise<MonitorStatus> {
+    return this.repo.getStatus();
+  }
+
+  public async setStatus(status: MonitorStatus): Promise<void> {
+    await this.repo.setStatus(status);
+  }
+
+  public async getSelectedBranches(): Promise<string[]> {
+    return this.repo.getSelectedBranches(this.defaultBranches);
+  }
+
+  public async setSelectedBranches(branches: string[]): Promise<void> {
+    await this.repo.setSelectedBranches(branches);
   }
 }
