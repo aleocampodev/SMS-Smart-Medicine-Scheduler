@@ -21,6 +21,7 @@
       "name": "@SMS/scheduler",
       "version": "1.0.0",
       "dependencies": {
+        "@SMS/db": "workspace:*",
         "@SMS/poller": "workspace:*",
         "dotenv": "^17.4.2",
         "grammy": "^1.46.0",

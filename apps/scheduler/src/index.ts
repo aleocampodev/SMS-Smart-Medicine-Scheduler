@@ -1,3 +1,9 @@
+import { createDb } from "@SMS/db";
+import {
+  createAppointmentRepository,
+  type AppointmentRepository,
+} from "@SMS/db/repositories/appointments";
+import { createMonitorStateRepository } from "@SMS/db/repositories/monitorState";
 import {
   shouldPoll,
   shouldTriggerDailyClaimPrompt,
@@ -11,7 +17,11 @@ import { QantyClient } from "./poller/qantyClient.js";
 import { RulesEngine } from "./poller/rulesEngine.js";
 import { AdaptiveScheduler } from "./poller/adaptiveScheduler.js";
 import { TelegramBotService } from "./bot/telegramBot.js";
-import { InMemoryMonitorStateAdapter } from "./ports.js";
+import {
+  InMemoryMonitorStateAdapter,
+  PostgresMonitorStateAdapter,
+  type MonitorStatePort,
+} from "./ports.js";
 
 async function main() {
   console.log("====================================================");
@@ -29,7 +39,22 @@ async function main() {
   const qantyClient = new QantyClient();
   const rulesEngine = new RulesEngine();
   const booker = new PlaywrightBooker();
-  const statePort = new InMemoryMonitorStateAdapter("AWAITING_CONFIRMATION", env.TARGET_BRANCH_IDS);
+
+  let statePort: MonitorStatePort;
+  let appointmentRepo: AppointmentRepository | null = null;
+
+  if (env.DATABASE_URL) {
+    const db = createDb({ DATABASE_URL: env.DATABASE_URL });
+    statePort = new PostgresMonitorStateAdapter(
+      createMonitorStateRepository(db),
+      env.TARGET_BRANCH_IDS,
+    );
+    appointmentRepo = createAppointmentRepository(db);
+    console.log("[Config] Persistence: PostgreSQL (@SMS/db) active.");
+  } else {
+    statePort = new InMemoryMonitorStateAdapter("AWAITING_CONFIRMATION", env.TARGET_BRANCH_IDS);
+    console.log("[Config] Persistence: In-memory fallback (DATABASE_URL not set).");
+  }
 
   const pollCycle = async () => {
     try {
@@ -66,6 +91,18 @@ async function main() {
                 profiles,
                 digest.totalCount,
               );
+              if (appointmentRepo) {
+                try {
+                  await appointmentRepo.record({
+                    branchId,
+                    slotDate: digest.earliestSlot.date,
+                    slotTime: digest.earliestSlot.time,
+                    status: "alerted",
+                  });
+                } catch (dbErr: any) {
+                  console.warn("[DB] Failed to record alerted appointment:", dbErr.message);
+                }
+              }
               continue;
             }
 
@@ -74,6 +111,21 @@ async function main() {
             );
             const result = await booker.bookAppointment(digest.earliestSlot, targetProfile);
             await botService.notifyBookingOutcome(result, targetProfile);
+
+            if (appointmentRepo) {
+              try {
+                await appointmentRepo.record({
+                  profileId: targetProfile.id,
+                  branchId,
+                  slotDate: result.slotDate,
+                  slotTime: result.slotTime,
+                  status: result.success ? "booked" : "failed",
+                  confirmationCode: result.confirmationCode,
+                });
+              } catch (dbErr: any) {
+                console.warn("[DB] Failed to record booking outcome:", dbErr.message);
+              }
+            }
 
             if (result.success) {
               const updated = transitionMonitorStatus(await statePort.getStatus(), "PAUSE");
